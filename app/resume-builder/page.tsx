@@ -1,8 +1,7 @@
-﻿"use client"
+"use client"
 
 import type { ReactNode } from "react"
 import { useRef, useState } from "react"
-import { toPng } from "html-to-image"
 import { jsPDF } from "jspdf"
 import { Download, Eye, Globe, Sparkles } from "lucide-react"
 
@@ -73,10 +72,6 @@ function formatSectionLines(value: string) {
     .split("\n")
     .map((line) => line.trim().replace(/^[\u2022*-]\s*/, ""))
     .filter(Boolean)
-}
-
-function hasArabicScript(value: string) {
-  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(value)
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -171,7 +166,7 @@ function skillsOrFallback(skillsList: string[], accent: string, soft: string) {
 
 function ModernPreview({ data, theme, experienceLines, educationLines, skillsList }: PreviewProps) {
   return (
-    <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_20px_45px_-24px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
+    <div className="overflow-hidden rounded-[28px] bg-white shadow-sm">
       <div className="px-8 py-8" style={{ background: `linear-gradient(135deg, ${theme.soft}, white 55%)` }}>
         <div className="flex flex-wrap items-start justify-between gap-6 border-b pb-6" style={{ borderColor: `${theme.accent}30` }}>
           <div>
@@ -212,15 +207,11 @@ function ModernPreview({ data, theme, experienceLines, educationLines, skillsLis
 
 function BilingualPreview({ data, theme, experienceLines, educationLines, skillsList }: PreviewProps) {
   const summary = data.summary || "Add a concise professional summary to preview your resume here."
-  const arabicName = hasArabicScript(data.fullName) ? data.fullName : "\u0623\u062d\u0645\u062f \u0627\u0644\u0645\u0646\u0635\u0648\u0631\u064a"
-  const arabicTitle = hasArabicScript(data.title) ? data.title : "\u0648\u0633\u064a\u0637 \u0639\u0642\u0627\u0631\u064a \u0623\u0648\u0644"
-  const arabicSummary =
-    hasArabicScript(data.summary) ? data.summary : "\u0623\u0636\u0641 \u0645\u0644\u062e\u0635\u0643 \u0627\u0644\u0645\u0647\u0646\u064a \u0628\u0627\u0644\u0644\u063a\u0629 \u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u0647\u0646\u0627."
 
   return (
-    <div className="aspect-[210/297] w-full overflow-hidden rounded-[28px] bg-white shadow-[0_20px_45px_-24px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
-      <div className="grid h-full md:grid-cols-[1.05fr_0.95fr]">
-        <div className="flex h-full flex-col px-8 py-8" style={{ backgroundColor: theme.soft }}>
+    <div className="overflow-hidden rounded-[28px] bg-white shadow-sm">
+      <div className="grid md:grid-cols-[1.05fr_0.95fr]">
+        <div className="px-8 py-8" style={{ backgroundColor: theme.soft }}>
           <p className="text-xs uppercase tracking-[0.35em]" style={{ color: theme.accent }}>
             English
           </p>
@@ -237,45 +228,38 @@ function BilingualPreview({ data, theme, experienceLines, educationLines, skills
             <p>{data.location || "City, Country"}</p>
           </div>
 
-          <div className="mt-8 space-y-8">
-            <ResumeSection title="Skills" accent={theme.accent}>
-              {skillsOrFallback(skillsList, theme.accent, "white")}
-            </ResumeSection>
+          <ResumeSection title="Skills" accent={theme.accent} className="mt-8">
+            {skillsOrFallback(skillsList, theme.accent, "white")}
+          </ResumeSection>
 
-            <ResumeSection title="Education" accent={theme.accent}>
-              {listOrFallback(educationLines, theme.accent, "Add your education and certifications to preview them here.")}
-            </ResumeSection>
-          </div>
+          <ResumeSection title="Education" accent={theme.accent} className="mt-8">
+            {listOrFallback(educationLines, theme.accent, "Add your education and certifications to preview them here.")}
+          </ResumeSection>
         </div>
 
-        <div className="flex h-full flex-col bg-white px-8 py-8">
+        <div className="px-8 py-8">
           <div className="flex items-center justify-between border-b pb-5" style={{ borderColor: `${theme.accent}30` }}>
             <div>
               <p className="text-xs uppercase tracking-[0.35em]" style={{ color: theme.accent }}>
                 Arabic
               </p>
               <p className="mt-2 text-right text-lg font-semibold" dir="rtl" style={{ color: theme.deep }}>
-                {arabicName}
-              </p>
-              <p className="mt-1 text-right text-sm font-medium" dir="rtl" style={{ color: theme.accent }}>
-                {arabicTitle}
+                {data.fullName || "اسمك هنا"}
               </p>
             </div>
             <div className="h-16 w-px" style={{ backgroundColor: `${theme.accent}30` }} />
           </div>
 
-          <div className="mt-6 space-y-6">
-            <ResumeSection title="Professional Summary" accent={theme.accent}>
-              <p className="text-sm leading-7 text-slate-700">{summary}</p>
-              <p className="mt-3 text-sm leading-7 text-slate-500" dir="rtl">
-                {arabicSummary}
-              </p>
-            </ResumeSection>
+          <ResumeSection title="Professional Summary" accent={theme.accent} className="mt-6">
+            <p className="text-sm leading-7 text-slate-700">{summary}</p>
+            <p className="mt-3 text-sm leading-7 text-slate-500" dir="rtl">
+              {summary}
+            </p>
+          </ResumeSection>
 
-            <ResumeSection title="Experience" accent={theme.accent}>
-              {listOrFallback(experienceLines, theme.accent, "Add your work experience to preview it here.")}
-            </ResumeSection>
-          </div>
+          <ResumeSection title="Experience" accent={theme.accent} className="mt-6">
+            {listOrFallback(experienceLines, theme.accent, "Add your work experience to preview it here.")}
+          </ResumeSection>
         </div>
       </div>
     </div>
@@ -284,7 +268,7 @@ function BilingualPreview({ data, theme, experienceLines, educationLines, skills
 
 function ExecutivePreview({ data, theme, experienceLines, educationLines, skillsList }: PreviewProps) {
   return (
-    <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_20px_45px_-24px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
+    <div className="overflow-hidden rounded-[28px] bg-white shadow-sm">
       <div className="px-8 py-8">
         <div className="rounded-[24px] px-8 py-8" style={{ backgroundColor: theme.deep }}>
           <p className="text-xs uppercase tracking-[0.4em]" style={{ color: "#FCD34D" }}>
@@ -327,7 +311,7 @@ function ExecutivePreview({ data, theme, experienceLines, educationLines, skills
 
 function MinimalPreview({ data, theme, experienceLines, educationLines, skillsList }: PreviewProps) {
   return (
-    <div className="overflow-hidden rounded-[20px] bg-white shadow-[0_20px_45px_-24px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
+    <div className="overflow-hidden rounded-[20px] bg-white shadow-sm">
       <div className="px-10 py-10">
         <div className="border-b pb-6" style={{ borderColor: "#E2E8F0" }}>
           <h2 className="text-3xl font-semibold tracking-tight" style={{ color: theme.deep }}>
@@ -337,7 +321,7 @@ function MinimalPreview({ data, theme, experienceLines, educationLines, skillsLi
             {data.title || "Professional Title"}
           </p>
           <p className="mt-4 text-sm" style={{ color: theme.muted }}>
-            {[data.email || "email@example.com", data.phone || "+00 000 000 0000", data.location || "City, Country"].join("  â€¢  ")}
+            {[data.email || "email@example.com", data.phone || "+00 000 000 0000", data.location || "City, Country"].join("  •  ")}
           </p>
         </div>
 
@@ -355,7 +339,7 @@ function MinimalPreview({ data, theme, experienceLines, educationLines, skillsLi
           </ResumeSection>
           <ResumeSection title="Skills" accent={theme.accent}>
             <p className="text-sm leading-7 text-slate-700">
-              {skillsList.length ? skillsList.join(" â€¢ ") : "Add your key skills to preview them here."}
+              {skillsList.length ? skillsList.join(" • ") : "Add your key skills to preview them here."}
             </p>
           </ResumeSection>
         </div>
@@ -366,7 +350,7 @@ function MinimalPreview({ data, theme, experienceLines, educationLines, skillsLi
 
 function IndustryPreview({ data, theme, experienceLines, educationLines, skillsList }: PreviewProps) {
   return (
-    <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_20px_45px_-24px_rgba(15,23,42,0.28)] ring-1 ring-slate-200">
+    <div className="overflow-hidden rounded-[28px] bg-white shadow-sm">
       <div className="grid md:grid-cols-[0.72fr_1.28fr]">
         <aside className="px-7 py-8 text-white" style={{ background: `linear-gradient(180deg, ${theme.accent}, #4C1D95)` }}>
           <h2 className="text-3xl font-bold">{data.fullName || "Your Name"}</h2>
@@ -429,7 +413,7 @@ function TemplatePreview(props: PreviewProps & { style: TemplateStyle }) {
   }
 }
 
-function buildPdf(doc: jsPDF, style: string, data: ResumeData, theme: (typeof templateThemes)[TemplateStyle], experienceLines: string[], educationLines: string[], skillsList: string[]) {
+function buildPdf(doc: jsPDF, style: TemplateStyle, data: ResumeData, theme: (typeof templateThemes)[TemplateStyle], experienceLines: string[], educationLines: string[], skillsList: string[]) {
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 44
@@ -438,10 +422,6 @@ function buildPdf(doc: jsPDF, style: string, data: ResumeData, theme: (typeof te
   const softRgb = hexToRgb(theme.soft)
   const darkRgb = hexToRgb(theme.deep)
   const mutedRgb = hexToRgb(theme.muted)
-  const arabicName = hasArabicScript(data.fullName) ? data.fullName : "\u0623\u062d\u0645\u062f \u0627\u0644\u0645\u0646\u0635\u0648\u0631\u064a"
-  const arabicSummary = hasArabicScript(data.summary)
-    ? data.summary
-    : "\u0623\u0636\u0641 \u0645\u0644\u062e\u0635\u0643 \u0627\u0644\u0645\u0647\u0646\u064a \u0628\u0627\u0644\u0644\u063a\u0629 \u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u0647\u0646\u0627."
   let y = margin
 
   const ensureSpace = (height: number) => {
@@ -496,67 +476,6 @@ function buildPdf(doc: jsPDF, style: string, data: ResumeData, theme: (typeof te
     }
   }
 
-  if (style === "bilingual") {
-    const leftWidth = pageWidth * 0.36
-    const leftX = margin
-    const leftTextWidth = leftWidth - margin - 8
-    const rightX = leftWidth + 34
-    const rightWidth = pageWidth - rightX - margin
-    const summary = data.summary || "Add a concise professional summary to preview your resume here."
-
-    doc.setFillColor(softRgb[0], softRgb[1], softRgb[2])
-    doc.rect(0, 0, leftWidth, pageHeight, "F")
-
-    y = 54
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(10)
-    doc.setTextColor(accentRgb[0], accentRgb[1], accentRgb[2])
-    doc.text("ENGLISH", leftX, y)
-    y += 24
-    textBlock(data.fullName || "Your Name", leftX, leftTextWidth, 22, 24, darkRgb, "bold")
-    y += 2
-    textBlock(data.title || "Professional Title", leftX, leftTextWidth, 13, 17, accentRgb, "bold")
-    y += 14
-    textBlock(data.email || "email@example.com", leftX, leftTextWidth, 10, 14, mutedRgb)
-    textBlock(data.phone || "+00 000 000 0000", leftX, leftTextWidth, 10, 14, mutedRgb)
-    textBlock(data.location || "City, Country", leftX, leftTextWidth, 10, 14, mutedRgb)
-
-    y = Math.max(y + 34, 250)
-    sectionTitle("Skills", leftX, leftTextWidth)
-    textBlock(skillsList.length ? skillsList.join(" | ") : "Add your key skills here.", leftX, leftTextWidth, 10, 14, mutedRgb)
-    y += 10
-    sectionTitle("Education", leftX, leftTextWidth)
-    bulletList(educationLines, leftX, leftTextWidth, mutedRgb)
-
-    y = 54
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(10)
-    doc.setTextColor(accentRgb[0], accentRgb[1], accentRgb[2])
-    doc.text("ARABIC", rightX, y)
-    y += 24
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(18)
-    doc.setTextColor(darkRgb[0], darkRgb[1], darkRgb[2])
-    doc.text("\u0627\u0644\u0627\u0633\u0645 \u0628\u0627\u0644\u0639\u0631\u0628\u064a\u0629", rightX + rightWidth, y, { align: "right" })
-    y += 12
-    doc.setDrawColor(accentRgb[0], accentRgb[1], accentRgb[2])
-    doc.line(rightX, y, rightX + rightWidth, y)
-    y += 24
-
-    sectionTitle("Professional Summary", rightX, rightWidth)
-    textBlock(summary, rightX, rightWidth, 11, 16, [55, 65, 81])
-    y += 4
-    doc.setFont("helvetica", "normal")
-    doc.setFontSize(11)
-    doc.setTextColor(107, 114, 128)
-    doc.text("\u0645\u0644\u062e\u0635 \u0645\u0647\u0646\u064a", rightX + rightWidth, y, { align: "right" })
-    y += 18
-
-    sectionTitle("Experience", rightX, rightWidth)
-    bulletList(experienceLines, rightX, rightWidth)
-    return
-  }
-
   if (style === "modern") {
     doc.setFillColor(softRgb[0], softRgb[1], softRgb[2])
     doc.rect(0, 0, pageWidth, 120, "F")
@@ -605,21 +524,17 @@ function buildPdf(doc: jsPDF, style: string, data: ResumeData, theme: (typeof te
     const rightX = pageWidth * 0.44
     const rightWidth = pageWidth - rightX - margin
     sectionTitle("Arabic", rightX, rightWidth)
-    textBlock(arabicName, rightX, rightWidth, 18, 22, darkRgb, "bold")
+    textBlock(data.fullName || "اسمك هنا", rightX, rightWidth, 18, 22, darkRgb, "bold")
     y += 6
     sectionTitle("Professional Summary", rightX, rightWidth)
     textBlock(data.summary || "Add a concise professional summary to preview your resume here.", rightX, rightWidth, 11, 16, [55, 65, 81])
-    textBlock(arabicSummary, rightX, rightWidth, 11, 16, [107, 114, 128])
+    textBlock(data.summary || "Add a concise professional summary to preview your resume here.", rightX, rightWidth, 11, 16, [107, 114, 128])
     sectionTitle("Experience", rightX, rightWidth)
     bulletList(experienceLines, rightX, rightWidth)
     return
   } else if (style === "executive") {
-    const executiveDetails = [data.title || "Professional Title", data.email || "email@example.com", data.phone || "+00 000 000 0000", data.location || "City, Country"].join("   |   ")
-    const executiveDetailLines = doc.splitTextToSize(executiveDetails, contentWidth - 48)
-    const executiveHeaderHeight = 106 + executiveDetailLines.length * 14
-
     doc.setFillColor(darkRgb[0], darkRgb[1], darkRgb[2])
-    doc.roundedRect(margin, 36, contentWidth, executiveHeaderHeight, 14, 14, "F")
+    doc.roundedRect(margin, 36, contentWidth, 120, 14, 14, "F")
     doc.setFont("helvetica", "bold")
     doc.setFontSize(10)
     doc.setTextColor(252, 211, 77)
@@ -627,11 +542,10 @@ function buildPdf(doc: jsPDF, style: string, data: ResumeData, theme: (typeof te
     doc.setFontSize(24)
     doc.setTextColor(255, 255, 255)
     doc.text(data.fullName || "Your Name", margin + 24, 96)
-    doc.setFont("helvetica", "normal")
     doc.setFontSize(11)
     doc.setTextColor(226, 232, 240)
-    doc.text(executiveDetailLines, margin + 24, 122)
-    y = 36 + executiveHeaderHeight + 34
+    doc.text([data.title || "Professional Title", data.email || "email@example.com", data.phone || "+00 000 000 0000", data.location || "City, Country"].join("   |   "), margin + 24, 122)
+    y = 190
   } else if (style === "minimal") {
     doc.setFont("helvetica", "bold")
     doc.setFontSize(24)
@@ -641,7 +555,7 @@ function buildPdf(doc: jsPDF, style: string, data: ResumeData, theme: (typeof te
     doc.setFontSize(10)
     doc.setTextColor(mutedRgb[0], mutedRgb[1], mutedRgb[2])
     doc.text((data.title || "Professional Title").toUpperCase(), margin, 84)
-    doc.text([data.email || "email@example.com", data.phone || "+00 000 000 0000", data.location || "City, Country"].join("  â€¢  "), margin, 104)
+    doc.text([data.email || "email@example.com", data.phone || "+00 000 000 0000", data.location || "City, Country"].join("  •  "), margin, 104)
     doc.setDrawColor(203, 213, 225)
     doc.line(margin, 120, pageWidth - margin, 120)
     y = 146
@@ -722,7 +636,7 @@ function buildPdf(doc: jsPDF, style: string, data: ResumeData, theme: (typeof te
   sectionTitle("Education")
   bulletList(educationLines)
   sectionTitle("Skills")
-  textBlock(skillsList.length ? (style === "minimal" ? skillsList.join(" â€¢ ") : skillsList.join(" | ")) : "Add your key skills to preview them here.")
+  textBlock(skillsList.length ? (style === "minimal" ? skillsList.join(" • ") : skillsList.join(" | ")) : "Add your key skills to preview them here.")
 }
 
 export default function ResumeBuilderPage() {
@@ -739,7 +653,6 @@ export default function ResumeBuilderPage() {
     skills: "",
   })
   const [aiOptimizing, setAiOptimizing] = useState(false)
-  const [isDownloading, setIsDownloading] = useState(false)
   const [atsScore, setAtsScore] = useState(0)
   const previewRef = useRef<HTMLDivElement>(null)
 
@@ -784,59 +697,10 @@ export default function ResumeBuilderPage() {
     previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
-  const handleDownloadPdf = async () => {
-    if (isDownloading) return
-
-    setIsDownloading(true)
-
-    try {
-      if (selectedTemplate.style === "bilingual") {
-        const previewElement = previewRef.current
-
-        if (!previewElement) {
-          throw new Error("Preview element is unavailable.")
-        }
-
-        const imageData = await toPng(previewElement, {
-          backgroundColor: "#ffffff",
-          cacheBust: true,
-          pixelRatio: 2,
-        })
-        const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" })
-        const pageWidth = doc.internal.pageSize.getWidth()
-        const pageHeight = doc.internal.pageSize.getHeight()
-        const imageWidth = pageWidth
-        const imageHeight = (previewElement.offsetHeight * imageWidth) / previewElement.offsetWidth
-
-        if (imageHeight <= pageHeight) {
-          doc.addImage(imageData, "PNG", 0, 0, imageWidth, imageHeight, undefined, "FAST")
-        } else {
-          let remainingHeight = imageHeight
-          let position = 0
-
-          doc.addImage(imageData, "PNG", 0, position, imageWidth, imageHeight, undefined, "FAST")
-          remainingHeight -= pageHeight
-
-          while (remainingHeight > 0) {
-            position -= pageHeight
-            doc.addPage()
-            doc.addImage(imageData, "PNG", 0, position, imageWidth, imageHeight, undefined, "FAST")
-            remainingHeight -= pageHeight
-          }
-        }
-
-        doc.save(`${slugifyFileName(formData.fullName || "resume") || "resume"}.pdf`)
-        return
-      }
-
-      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" })
-      buildPdf(doc, selectedTemplate.style, formData, selectedTheme, experienceLines, educationLines, skillsList)
-      doc.save(`${slugifyFileName(formData.fullName || "resume") || "resume"}.pdf`)
-    } catch (error) {
-      console.error("Failed to export resume preview.", error)
-    } finally {
-      setIsDownloading(false)
-    }
+  const handleDownloadPdf = () => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" })
+    buildPdf(doc, selectedTemplate.style, formData, selectedTheme, experienceLines, educationLines, skillsList)
+    doc.save(`${slugifyFileName(formData.fullName || "resume") || "resume"}.pdf`)
   }
 
   return (
@@ -983,9 +847,9 @@ export default function ResumeBuilderPage() {
                     <Eye className="mr-2 h-4 w-4" />
                     Preview Resume
                   </Button>
-                  <Button variant="outline" className="flex-1 bg-transparent" onClick={handleDownloadPdf} disabled={isDownloading}>
+                  <Button variant="outline" className="flex-1 bg-transparent" onClick={handleDownloadPdf}>
                     <Download className="mr-2 h-4 w-4" />
-                    {isDownloading ? "Preparing PDF..." : "Download PDF"}
+                    Download PDF
                   </Button>
                 </div>
               </CardContent>
@@ -1004,17 +868,15 @@ export default function ResumeBuilderPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-2xl bg-slate-100 p-4 md:p-8">
-                  <div ref={previewRef} className="mx-auto w-full max-w-[860px] transition-all">
-                    <TemplatePreview
-                      style={selectedTemplate.style}
-                      data={formData}
-                      theme={selectedTheme}
-                      experienceLines={experienceLines}
-                      educationLines={educationLines}
-                      skillsList={skillsList}
-                    />
-                  </div>
+                <div ref={previewRef} className={`rounded-xl border bg-white p-3 shadow-sm transition-all ${selectedTheme.preview}`}>
+                  <TemplatePreview
+                    style={selectedTemplate.style}
+                    data={formData}
+                    theme={selectedTheme}
+                    experienceLines={experienceLines}
+                    educationLines={educationLines}
+                    skillsList={skillsList}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -1050,5 +912,3 @@ export default function ResumeBuilderPage() {
     </div>
   )
 }
-
-
