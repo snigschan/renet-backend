@@ -743,7 +743,7 @@ export default function HomePage() {
             {/* Large lifestyle image */}
             <div className="relative h-[500px] rounded-2xl overflow-hidden shadow-xl group animate-fade-in-left">
               <Image
-                src="/images/design-mode/Screenshot%202025-10-15%20at%2010.07.18%E2%80%AFPM.png"
+                src="/images/design-mode/showcase-lifestyle.png"
                 alt="Renet app with professional lifestyle items"
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
@@ -765,7 +765,7 @@ export default function HomePage() {
                 style={{ animationDelay: "0.2s" }}
               >
                 <Image
-                  src="/images/design-mode/Screenshot%202025-10-15%20at%2010.07.09%E2%80%AFPM.png.jpeg"
+                  src="/images/design-mode/showcase-login.jpeg"
                   alt="Renet mobile app login screen"
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
@@ -783,7 +783,7 @@ export default function HomePage() {
                 style={{ animationDelay: "0.4s" }}
               >
                 <Image
-                  src="/images/design-mode/Screenshot%202025-10-15%20at%2010.07.26%E2%80%AFPM.png"
+                  src="/images/design-mode/showcase-workspace.png"
                   alt="Renet app on desk with modern workspace"
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
