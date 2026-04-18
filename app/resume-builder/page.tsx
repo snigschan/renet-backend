@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import { useRef, useState } from "react"
 import { jsPDF } from "jspdf"
-import { Download, Eye, Globe, Sparkles } from "lucide-react"
+import { Download, Eye, Globe, Plus, Sparkles, Trash2 } from "lucide-react"
 
 import { SiteHeader } from "@/components/site-header"
 import { Badge } from "@/components/ui/badge"
@@ -86,6 +86,29 @@ function slugifyFileName(value: string) {
   return value.trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, "-")
 }
 
+function formatResumeDate(value: string) {
+  if (!value) return ""
+
+  const [year, month] = value.split("-")
+  if (!year || !month) return value
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  const monthIndex = Number(month) - 1
+  if (monthIndex < 0 || monthIndex > 11) return year
+
+  return `${monthNames[monthIndex]} ${year}`
+}
+
+function formatDateRange(fromDate: string, toDate: string) {
+  const fromLabel = formatResumeDate(fromDate)
+  const toLabel = formatResumeDate(toDate)
+
+  if (fromLabel && toLabel) return `${fromLabel} - ${toLabel}`
+  if (fromLabel) return `${fromLabel} - Present`
+  if (toLabel) return toLabel
+  return ""
+}
+
 type ResumeData = {
   fullName: string
   title: string
@@ -93,9 +116,76 @@ type ResumeData = {
   phone: string
   location: string
   summary: string
-  experience: string
-  education: string
-  skills: string
+}
+
+type ResumeStep = "personal" | "experience" | "education" | "skills"
+type EducationType = "High School" | "Certification" | "Bachelor's Degree" | "Diploma" | "Other" | "Master's Degree" | "PhD"
+
+type ExperienceItem = {
+  role: string
+  company: string
+  description: string
+}
+
+type EducationItem = {
+  type: EducationType
+  title: string
+  institution: string
+  score: string
+  fromDate: string
+  toDate: string
+}
+
+const createExperienceItem = (overrides: Partial<ExperienceItem> = {}): ExperienceItem => ({
+  role: "",
+  company: "",
+  description: "",
+  ...overrides,
+})
+
+const createEducationItem = (overrides: Partial<EducationItem> = {}): EducationItem => ({
+  type: "Bachelor's Degree",
+  title: "",
+  institution: "",
+  score: "",
+  fromDate: "",
+  toDate: "",
+  ...overrides,
+})
+
+const formSteps: Record<
+  ResumeStep,
+  {
+    label: string
+    title: string
+    description: string
+    tip: string
+  }
+> = {
+  personal: {
+    label: "Personal",
+    title: "Start with your basic details",
+    description: "Add the contact details and role you want recruiters to see first.",
+    tip: "Use the job title you are targeting, not only your current title.",
+  },
+  experience: {
+    label: "Experience",
+    title: "Add achievements, not just responsibilities",
+    description: "Add your role, company, and a short description for each experience item.",
+    tip: "Keep the description concise and results-focused so recruiters can scan it quickly.",
+  },
+  education: {
+    label: "Education",
+    title: "Keep each qualification easy to read",
+    description: "Choose a heading, add the qualification, include your score, and select from and to dates on the right.",
+    tip: "Use clear headings like High School, Bachelor's Degree, Master's Degree, PhD, or Certification.",
+  },
+  skills: {
+    label: "Skills",
+    title: "Add searchable skills recruiters look for",
+    description: "Add one skill per field so each one is easy to review, edit, and showcase clearly.",
+    tip: "Mix industry skills and tools, for example: Negotiation, CRM, Market Analysis, and RERA.",
+  },
 }
 
 type PreviewProps = {
@@ -641,6 +731,7 @@ function buildPdf(doc: jsPDF, style: TemplateStyle, data: ResumeData, theme: (ty
 
 export default function ResumeBuilderPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<(typeof templates)[number]>(templates[0])
+  const [activeStep, setActiveStep] = useState<ResumeStep>("personal")
   const [formData, setFormData] = useState<ResumeData>({
     fullName: "",
     title: "",
@@ -648,21 +739,89 @@ export default function ResumeBuilderPage() {
     phone: "",
     location: "",
     summary: "",
-    experience: "",
-    education: "",
-    skills: "",
   })
+  const [experienceItems, setExperienceItems] = useState<ExperienceItem[]>([createExperienceItem()])
+  const [savedExperienceItems, setSavedExperienceItems] = useState<boolean[]>([false])
+  const [educationItems, setEducationItems] = useState<EducationItem[]>([createEducationItem()])
+  const [savedEducationItems, setSavedEducationItems] = useState<boolean[]>([false])
+  const [skillItems, setSkillItems] = useState<string[]>([])
+  const [skillDraft, setSkillDraft] = useState("")
+  const [showSkillInput, setShowSkillInput] = useState(true)
   const [aiOptimizing, setAiOptimizing] = useState(false)
   const [atsScore, setAtsScore] = useState(0)
+  const [showPreview, setShowPreview] = useState(false)
   const previewRef = useRef<HTMLDivElement>(null)
 
   const selectedTheme = templateThemes[selectedTemplate.style]
-  const experienceLines = formatSectionLines(formData.experience)
-  const educationLines = formatSectionLines(formData.education)
-  const skillsList = formData.skills.split(",").map((skill) => skill.trim()).filter(Boolean)
+  const currentStep = formSteps[activeStep]
+  const experienceLines = experienceItems
+    .map((item) => {
+      const role = item.role.trim()
+      const company = item.company.trim()
+      const description = item.description.trim()
+      if (!role && !company && !description) return ""
+
+      const heading = [role, company].filter(Boolean).join(" at ")
+      return [heading, description].filter(Boolean).join(": ")
+    })
+    .filter(Boolean)
+  const educationLines = educationItems
+    .map((item) => {
+      const title = item.title.trim()
+      const institution = item.institution.trim()
+      const score = item.score.trim()
+      const dateRange = formatDateRange(item.fromDate, item.toDate)
+      if (!title && !institution && !score && !dateRange) return ""
+
+      const parts = [title, institution].filter(Boolean)
+      const detail = parts.join(" - ")
+      const heading = item.type.trim()
+      const scoreLabel = score ? `Score: ${score}` : ""
+      return [heading ? `${heading}:` : "", detail, scoreLabel, dateRange ? `(${dateRange})` : ""].filter(Boolean).join(" ")
+    })
+    .filter(Boolean)
+  const skillsList = skillItems.map((item) => item.trim()).filter(Boolean)
 
   const updateField = (field: keyof ResumeData, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }))
+  }
+
+  const updateExperienceItem = (index: number, field: keyof ExperienceItem, value: string) => {
+    setExperienceItems((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)))
+    setSavedExperienceItems((current) => current.map((saved, itemIndex) => (itemIndex === index ? false : saved)))
+  }
+
+  const addExperienceItem = () => {
+    setExperienceItems((current) => [...current, createExperienceItem()])
+    setSavedExperienceItems((current) => [...current, false])
+  }
+
+  const saveExperienceItem = (index: number) => {
+    setSavedExperienceItems((current) => current.map((saved, itemIndex) => (itemIndex === index ? true : saved)))
+  }
+
+  const removeExperienceItem = (index: number) => {
+    setExperienceItems((current) => (current.length === 1 ? [createExperienceItem()] : current.filter((_, itemIndex) => itemIndex !== index)))
+    setSavedExperienceItems((current) => (current.length === 1 ? [false] : current.filter((_, itemIndex) => itemIndex !== index)))
+  }
+
+  const updateEducationItem = (index: number, field: keyof EducationItem, value: string) => {
+    setEducationItems((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)))
+    setSavedEducationItems((current) => current.map((saved, itemIndex) => (itemIndex === index ? false : saved)))
+  }
+
+  const addEducationItem = () => {
+    setEducationItems((current) => [...current, createEducationItem()])
+    setSavedEducationItems((current) => [...current, false])
+  }
+
+  const saveEducationItem = (index: number) => {
+    setSavedEducationItems((current) => current.map((saved, itemIndex) => (itemIndex === index ? true : saved)))
+  }
+
+  const removeEducationItem = (index: number) => {
+    setEducationItems((current) => (current.length === 1 ? [createEducationItem()] : current.filter((_, itemIndex) => itemIndex !== index)))
+    setSavedEducationItems((current) => (current.length === 1 ? [false] : current.filter((_, itemIndex) => itemIndex !== index)))
   }
 
   const handleAiOptimize = () => {
@@ -672,8 +831,15 @@ export default function ResumeBuilderPage() {
       setFormData((prev) => ({
         ...prev,
         summary: `${prev.summary}${prev.summary ? " " : ""}RERA-licensed real estate professional with proven track record in Dubai luxury property market. Expert in client relationship management and sales negotiation.`,
-        skills: `${prev.skills}${prev.skills ? ", " : ""}RERA Certification, Dubai Property Law, CRM Systems, Market Analysis`,
       }))
+      setSkillItems((prev) => {
+        const existing = prev.map((item) => item.trim()).filter(Boolean)
+        const aiSkills = ["RERA Certification", "Dubai Property Law", "CRM Systems", "Market Analysis"]
+        const merged = [...new Set([...existing, ...aiSkills])]
+        return merged
+      })
+      setSkillDraft("")
+      setShowSkillInput(false)
       setAiOptimizing(false)
     }, 2000)
   }
@@ -686,15 +852,66 @@ export default function ResumeBuilderPage() {
       phone: "+971 50 123 4567",
       location: "Dubai, UAE",
       summary: "Results-driven real estate professional with 8+ years of experience in Dubai luxury property market.",
-      experience:
-        "Senior Broker at Emaar Properties (2020-Present)\nAchieved 150% of annual sales targets\nManaged portfolio of AED 50M+ properties\nLed team of 5 junior agents",
-      education: "Bachelor of Business Administration\nAmerican University of Dubai (2015)",
-      skills: "Property Sales, Client Relations, Market Analysis, Negotiation",
     })
+    setExperienceItems([
+      createExperienceItem({
+        role: "Senior Broker",
+        company: "Emaar Properties",
+        description: "Achieved 150% of annual sales targets and managed a portfolio of AED 50M+ properties.",
+      }),
+      createExperienceItem({
+        role: "Team Lead",
+        company: "Emaar Properties",
+        description: "Led and mentored 5 junior agents to improve deal conversion and client retention.",
+      }),
+    ])
+    setSavedExperienceItems([true, true])
+    setEducationItems([
+      createEducationItem({
+        type: "Bachelor's Degree",
+        title: "Bachelor of Business Administration",
+        institution: "American University of Dubai",
+        score: "3.8 GPA",
+        fromDate: "2011-09-01",
+        toDate: "2015-05-31",
+      }),
+      createEducationItem({
+        type: "Certification",
+        title: "RERA Certification",
+        institution: "Dubai Land Department",
+        score: "Passed",
+        fromDate: "2019-03-01",
+        toDate: "2019-06-01",
+      }),
+    ])
+    setSavedEducationItems([true, true])
+    setSkillItems(["Property Sales", "Client Relations", "Market Analysis", "Negotiation"])
+    setSkillDraft("")
+    setShowSkillInput(false)
+  }
+
+  const handleSaveSkill = () => {
+    const normalizedSkill = skillDraft.trim()
+    if (!normalizedSkill) return
+
+    setSkillItems((current) => (current.includes(normalizedSkill) ? current : [...current, normalizedSkill]))
+    setSkillDraft("")
+    setShowSkillInput(false)
+  }
+
+  const handleAddAnotherSkill = () => {
+    setShowSkillInput(true)
+  }
+
+  const removeSkill = (index: number) => {
+    setSkillItems((current) => current.filter((_, itemIndex) => itemIndex !== index))
   }
 
   const handlePreview = () => {
-    previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    setShowPreview(true)
+    window.requestAnimationFrame(() => {
+      previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
   }
 
   const handleDownloadPdf = () => {
@@ -767,64 +984,350 @@ export default function ResumeBuilderPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="personal" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="personal">Personal</TabsTrigger>
-                    <TabsTrigger value="experience">Experience</TabsTrigger>
-                    <TabsTrigger value="education">Education</TabsTrigger>
-                    <TabsTrigger value="skills">Skills</TabsTrigger>
+                <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{currentStep.title}</p>
+                      <p className="text-sm text-slate-600">{currentStep.description}</p>
+                    </div>
+                    <Badge variant="outline" className="w-fit border-slate-300 bg-white text-slate-700">
+                      Tip: {currentStep.tip}
+                    </Badge>
+                  </div>
+                </div>
+
+                <Tabs value={activeStep} onValueChange={(value) => setActiveStep(value as ResumeStep)} className="w-full">
+                  <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 md:grid-cols-4">
+                    <TabsTrigger value="personal" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      1. {formSteps.personal.label}
+                    </TabsTrigger>
+                    <TabsTrigger value="experience" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      2. {formSteps.experience.label}
+                    </TabsTrigger>
+                    <TabsTrigger value="education" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      3. {formSteps.education.label}
+                    </TabsTrigger>
+                    <TabsTrigger value="skills" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      4. {formSteps.skills.label}
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="personal" className="mt-4 space-y-4">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <p className="text-sm font-medium text-slate-900">What to add</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Use your full name, a clear job title, active contact details, and a short 2-3 line summary.
+                      </p>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <Label>Full Name</Label>
+                        <p className="mb-2 text-xs text-muted-foreground">Write it exactly as you want it on the final resume.</p>
                         <Input value={formData.fullName} onChange={(e) => updateField("fullName", e.target.value)} placeholder="Ahmed Al-Mansouri" />
                       </div>
                       <div>
                         <Label>Professional Title</Label>
+                        <p className="mb-2 text-xs text-muted-foreground">Example: Senior Real Estate Broker, Sales Manager, Leasing Consultant</p>
                         <Input value={formData.title} onChange={(e) => updateField("title", e.target.value)} placeholder="Senior Real Estate Broker" />
                       </div>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <Label>Email</Label>
+                        <p className="mb-2 text-xs text-muted-foreground">Use a professional email recruiters can reply to quickly.</p>
                         <Input type="email" value={formData.email} onChange={(e) => updateField("email", e.target.value)} placeholder="ahmed@example.com" />
                       </div>
                       <div>
                         <Label>Phone</Label>
+                        <p className="mb-2 text-xs text-muted-foreground">Include your country code if you are applying internationally.</p>
                         <Input value={formData.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+971 50 123 4567" />
                       </div>
                     </div>
                     <div>
                       <Label>Location</Label>
+                      <p className="mb-2 text-xs text-muted-foreground">City and country is enough. Full street address is not needed.</p>
                       <Input value={formData.location} onChange={(e) => updateField("location", e.target.value)} placeholder="Dubai, UAE" />
                     </div>
                     <div>
                       <Label>Professional Summary</Label>
-                      <Textarea value={formData.summary} onChange={(e) => updateField("summary", e.target.value)} placeholder="Brief overview of your experience and expertise..." rows={4} />
+                      <p className="mb-2 text-xs text-muted-foreground">Keep it short and focused on your years of experience, specialty, and strongest result.</p>
+                      <Textarea
+                        value={formData.summary}
+                        onChange={(e) => updateField("summary", e.target.value)}
+                        placeholder="Example: Results-driven real estate broker with 8+ years of experience in Dubai luxury property sales, client relationship management, and high-value negotiations."
+                        rows={4}
+                      />
                     </div>
                   </TabsContent>
 
                   <TabsContent value="experience" className="mt-4 space-y-4">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <p className="text-sm font-medium text-slate-900">Simple format</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Add one experience item at a time with your role, company, and a short description of your work or achievements.
+                      </p>
+                    </div>
                     <div>
                       <Label>Work Experience</Label>
-                      <Textarea value={formData.experience} onChange={(e) => updateField("experience", e.target.value)} placeholder="List your work experience with achievements..." rows={10} />
-                      <p className="mt-2 text-xs text-muted-foreground">Tip: use one line per achievement for a cleaner preview and PDF layout.</p>
+                      <p className="mb-3 text-xs text-muted-foreground">Each item has separate fields for role, company, and description, plus its own save button.</p>
+                      <div className="space-y-3">
+                        {experienceItems.map((item, index) => (
+                          <div key={`experience-${index}`} className="rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <p className="text-sm font-medium text-slate-900">Experience item {index + 1}</p>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-8 px-2 text-slate-500 hover:text-red-600"
+                                onClick={() => removeExperienceItem(index)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="grid gap-3">
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">Role</p>
+                                <Input
+                                  value={item.role}
+                                  onChange={(e) => updateExperienceItem(index, "role", e.target.value)}
+                                  placeholder="Senior Broker"
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">Company</p>
+                                <Input
+                                  value={item.company}
+                                  onChange={(e) => updateExperienceItem(index, "company", e.target.value)}
+                                  placeholder="Emaar Properties"
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">Description</p>
+                                <Textarea
+                                  value={item.description}
+                                  onChange={(e) => updateExperienceItem(index, "description", e.target.value)}
+                                  placeholder="Exceeded annual sales target by 150% and managed a premium property portfolio."
+                                  rows={3}
+                                />
+                              </div>
+                            </div>
+                            <div className="mt-4 flex items-center justify-between gap-3">
+                              <p className="text-xs text-muted-foreground">
+                                {savedExperienceItems[index] ? "This experience item is saved." : "Save this experience item when you're done editing it."}
+                              </p>
+                              <Button
+                                type="button"
+                                variant={savedExperienceItems[index] ? "secondary" : "default"}
+                                onClick={() => saveExperienceItem(index)}
+                                disabled={savedExperienceItems[index]}
+                              >
+                                {savedExperienceItems[index] ? "Saved" : "Save Experience Item"}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <Button type="button" variant="outline" className="mt-3 bg-transparent" onClick={addExperienceItem}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Another Experience Item
+                      </Button>
+                      <p className="mt-2 text-xs text-muted-foreground">Focus on numbers, deals closed, targets exceeded, leadership, and the kind of work you handled.</p>
                     </div>
                   </TabsContent>
 
                   <TabsContent value="education" className="mt-4 space-y-4">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <p className="text-sm font-medium text-slate-900">Easy structure to follow</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Choose a heading like High School, Bachelor's Degree, Master's Degree, PhD, or Certification, then pick from and to dates neatly.
+                      </p>
+                    </div>
                     <div>
                       <Label>Education & Certifications</Label>
-                      <Textarea value={formData.education} onChange={(e) => updateField("education", e.target.value)} placeholder="List your education and professional certifications..." rows={8} />
+                      <p className="mb-3 text-xs text-muted-foreground">Each item now has its own heading, title, school or institute, score, and calendar-based from/to dates on the right.</p>
+                      <div className="space-y-3">
+                        {educationItems.map((item, index) => (
+                          <div key={`education-${index}`} className="rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <p className="text-sm font-medium text-slate-900">Education item {index + 1}</p>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-8 px-2 text-slate-500 hover:text-red-600"
+                                onClick={() => removeEducationItem(index)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-[1.1fr_0.9fr_0.9fr]">
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">Heading</p>
+                                <select
+                                  value={item.type}
+                                  onChange={(e) => updateEducationItem(index, "type", e.target.value)}
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                >
+                                  <option value="High School">High School</option>
+                                  <option value="Certification">Certification</option>
+                                  <option value="Bachelor's Degree">Bachelor's Degree</option>
+                                  <option value="Diploma">Diploma</option>
+                                  <option value="Master's Degree">Master's Degree</option>
+                                  <option value="PhD">PhD</option>
+                                  <option value="Other">Other</option>
+                                </select>
+                              </div>
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">From</p>
+                                <Input
+                                  type="date"
+                                  value={item.fromDate}
+                                  onChange={(e) => updateEducationItem(index, "fromDate", e.target.value)}
+                                  max={item.toDate || undefined}
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">To</p>
+                                <Input
+                                  type="date"
+                                  value={item.toDate}
+                                  onChange={(e) => updateEducationItem(index, "toDate", e.target.value)}
+                                  min={item.fromDate || undefined}
+                                />
+                              </div>
+                            </div>
+                            <div className="mt-3 grid gap-3">
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">
+                                  {item.type === "Certification" ? "Certification Name" : item.type === "High School" ? "School Level / Program" : "Qualification Title"}
+                                </p>
+                                <Input
+                                  value={item.title}
+                                  onChange={(e) => updateEducationItem(index, "title", e.target.value)}
+                                  placeholder={
+                                    item.type === "Certification"
+                                      ? "RERA Certification"
+                                      : item.type === "High School"
+                                        ? "Higher Secondary Education"
+                                        : "Bachelor of Business Administration"
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">
+                                  {item.type === "High School" ? "School Name" : "College / Institute / Board"}
+                                </p>
+                                <Input
+                                  value={item.institution}
+                                  onChange={(e) => updateEducationItem(index, "institution", e.target.value)}
+                                  placeholder={
+                                    item.type === "Certification"
+                                      ? "Dubai Land Department"
+                                      : item.type === "High School"
+                                        ? "Delhi Public School"
+                                      : "American University of Dubai"
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-2 text-xs text-muted-foreground">Score / GPA / Percentage</p>
+                                <Input
+                                  value={item.score}
+                                  onChange={(e) => updateEducationItem(index, "score", e.target.value)}
+                                  placeholder={
+                                    item.type === "Certification"
+                                      ? "Passed with Distinction"
+                                      : item.type === "High School"
+                                        ? "88%"
+                                        : "3.8 GPA"
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <div className="mt-4 flex items-center justify-between gap-3">
+                              <p className="text-xs text-muted-foreground">
+                                {savedEducationItems[index] ? "This education item is saved." : "Save this education item when you're done editing it."}
+                              </p>
+                              <Button
+                                type="button"
+                                variant={savedEducationItems[index] ? "secondary" : "default"}
+                                onClick={() => saveEducationItem(index)}
+                                disabled={savedEducationItems[index]}
+                              >
+                                {savedEducationItems[index] ? "Saved" : "Save Education Item"}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <Button type="button" variant="outline" className="mt-3 bg-transparent" onClick={addEducationItem}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Another Education Item
+                      </Button>
+                      <p className="mt-2 text-xs text-muted-foreground">Use the heading to separate degrees, certifications, diplomas, and schooling clearly.</p>
                     </div>
                   </TabsContent>
 
                   <TabsContent value="skills" className="mt-4 space-y-4">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <p className="text-sm font-medium text-slate-900">Best way to enter skills</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Add one skill per row. Mix tools, industry knowledge, and soft skills that match the role.
+                      </p>
+                    </div>
                     <div>
                       <Label>Skills & Competencies</Label>
-                      <Textarea value={formData.skills} onChange={(e) => updateField("skills", e.target.value)} placeholder="List your key skills (comma-separated)..." rows={6} />
+                      <p className="mb-3 text-xs text-muted-foreground">Type one skill, save it on the right, then add the next one when you are ready.</p>
+                      {showSkillInput && (
+                        <div className="rounded-xl border border-slate-200 bg-white p-3">
+                          <p className="mb-2 text-sm font-medium text-slate-900">New skill</p>
+                          <div className="flex flex-col gap-3 sm:flex-row">
+                            <Input
+                              value={skillDraft}
+                              onChange={(e) => setSkillDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  handleSaveSkill()
+                                }
+                              }}
+                              placeholder="Property Sales"
+                              className="flex-1"
+                            />
+                            <Button type="button" onClick={handleSaveSkill} disabled={!skillDraft.trim()} className="sm:min-w-28">
+                              Save Skill
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {!!skillItems.length && (
+                        <div className="mt-3 space-y-3">
+                          {skillItems.map((item, index) => (
+                            <div key={`${item}-${index}`} className="rounded-xl border border-slate-200 bg-white p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-medium text-slate-900">Skill {index + 1}</p>
+                                  <p className="mt-1 text-sm text-slate-700">{item}</p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="h-8 px-2 text-slate-500 hover:text-red-600"
+                                  onClick={() => removeSkill(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {!showSkillInput && (
+                        <Button type="button" variant="outline" className="mt-3 bg-transparent" onClick={handleAddAnotherSkill}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Another Skill
+                        </Button>
+                      )}
+                      <p className="mt-2 text-xs text-muted-foreground">{skillsList.length} skill{skillsList.length === 1 ? "" : "s"} ready for preview.</p>
                       {atsScore > 0 && (
                         <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
                           <div className="mb-2 flex items-center justify-between">
@@ -855,31 +1358,33 @@ export default function ResumeBuilderPage() {
               </CardContent>
             </Card>
 
-            <Card className="mt-6">
-              <CardHeader>
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <CardTitle>Resume Preview</CardTitle>
-                    <CardDescription>Live preview based on your selected template and form details</CardDescription>
+            {showPreview && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <CardTitle>Resume Preview</CardTitle>
+                      <CardDescription>Live preview based on your selected template and form details</CardDescription>
+                    </div>
+                    <Badge variant="outline" className={selectedTheme.badge}>
+                      {selectedTemplate.name}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className={selectedTheme.badge}>
-                    {selectedTemplate.name}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div ref={previewRef} className={`rounded-xl border bg-white p-3 shadow-sm transition-all ${selectedTheme.preview}`}>
-                  <TemplatePreview
-                    style={selectedTemplate.style}
-                    data={formData}
-                    theme={selectedTheme}
-                    experienceLines={experienceLines}
-                    educationLines={educationLines}
-                    skillsList={skillsList}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent>
+                  <div ref={previewRef} className={`rounded-xl border bg-white p-3 shadow-sm transition-all ${selectedTheme.preview}`}>
+                    <TemplatePreview
+                      style={selectedTemplate.style}
+                      data={formData}
+                      theme={selectedTheme}
+                      experienceLines={experienceLines}
+                      educationLines={educationLines}
+                      skillsList={skillsList}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="mt-6">
               <CardHeader>
