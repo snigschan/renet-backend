@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { CompanyProfileEditor, type CompanyProfileFormValues } from "@/components/company-profile-editor"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -61,78 +61,6 @@ const emptyCompanyForm: CompanyProfileFormValues = {
   logo_url: fallbackAgency.logo,
 }
 
-const jobPostings = [
-  {
-    id: 1,
-    title: "Senior Property Consultant",
-    location: "Manhattan, NY",
-    type: "Full-time",
-    salary: "$80K - $120K",
-    posted: "2 days ago",
-    applications: 24,
-    views: 156,
-    status: "Active",
-  },
-  {
-    id: 2,
-    title: "Commercial Real Estate Broker",
-    location: "Brooklyn, NY",
-    type: "Full-time",
-    salary: "$90K - $150K",
-    posted: "1 week ago",
-    applications: 18,
-    views: 203,
-    status: "Active",
-  },
-  {
-    id: 3,
-    title: "Junior Sales Associate",
-    location: "Queens, NY",
-    type: "Full-time",
-    salary: "$50K - $70K",
-    posted: "3 days ago",
-    applications: 31,
-    views: 89,
-    status: "Active",
-  },
-]
-
-const candidates = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    title: "Senior Real Estate Agent",
-    location: "New York, NY",
-    experience: "8 years",
-    avatar: "/placeholder.svg?height=40&width=40",
-    match: 95,
-    appliedFor: "Senior Property Consultant",
-    status: "Under Review",
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    title: "Commercial Broker",
-    location: "Brooklyn, NY",
-    experience: "6 years",
-    avatar: "/placeholder.svg?height=40&width=40",
-    match: 88,
-    appliedFor: "Commercial Real Estate Broker",
-    status: "Interview Scheduled",
-  },
-  {
-    id: 3,
-    name: "Emily Rodriguez",
-    title: "Property Consultant",
-    location: "Manhattan, NY",
-    experience: "4 years",
-    avatar: "/placeholder.svg?height=40&width=40",
-    match: 82,
-    appliedFor: "Senior Property Consultant",
-    status: "New Application",
-  },
-]
-
 const createSlug = (value: string, userId: string) => {
   const base = value
     .toLowerCase()
@@ -171,6 +99,78 @@ type CompanyProfileVersionRow = {
   created_at: string
 }
 
+type JobRow = {
+  id: string
+  company_id: string
+  title: string
+  department: string | null
+  location: string | null
+  job_type: string | null
+  experience_level: string | null
+  salary_min: number | null
+  salary_max: number | null
+  description: string | null
+  requirements: string | null
+  benefits: string | null
+  status: "active" | "draft" | "closed"
+  views_count: number | null
+  created_at: string
+}
+
+type CandidateProfileRow = {
+  full_name: string | null
+  role: string | null
+  avatar_url: string | null
+}
+
+type JobApplicationRow = {
+  id: string
+  job_id: string
+  candidate_id: string
+  status: "new" | "under_review" | "interview_scheduled" | "hired" | "rejected"
+  match_score: number | null
+  created_at: string
+  jobs: Pick<JobRow, "title"> | null
+  candidate: CandidateProfileRow | null
+}
+
+type JobApplicationQueryRow = {
+  id: string
+  job_id: string
+  candidate_id: string
+  status: JobApplicationRow["status"]
+  match_score: number | null
+  created_at: string
+  jobs: Array<Pick<JobRow, "title">> | Pick<JobRow, "title"> | null
+  candidate: CandidateProfileRow[] | CandidateProfileRow | null
+}
+
+type JobPostFormValues = {
+  title: string
+  department: string
+  location: string
+  jobType: string
+  experienceLevel: string
+  salaryMin: string
+  salaryMax: string
+  description: string
+  requirements: string
+  benefits: string
+}
+
+const emptyJobForm: JobPostFormValues = {
+  title: "",
+  department: "",
+  location: "",
+  jobType: "",
+  experienceLevel: "",
+  salaryMin: "",
+  salaryMax: "",
+  description: "",
+  requirements: "",
+  benefits: "",
+}
+
 const mapCompanyToForm = (company?: Partial<CompanyRow> | null): CompanyProfileFormValues => ({
   name: company?.name || fallbackAgency.name,
   location: company?.location || fallbackAgency.location,
@@ -206,6 +206,57 @@ const buildSnapshotFromForm = (values: CompanyProfileFormValues): CompanyProfile
   logo_url: values.logo_url,
 })
 
+const isMissingHiringTablesError = (message?: string | null) =>
+  Boolean(message && /(jobs|job_applications|job_posting_status|application_status|relation .* does not exist|schema cache)/i.test(message))
+
+const formatRelativeDate = (isoDate: string) => {
+  const date = new Date(isoDate)
+  const diffMs = Date.now() - date.getTime()
+  const dayMs = 24 * 60 * 60 * 1000
+  const days = Math.max(0, Math.floor(diffMs / dayMs))
+
+  if (days === 0) return "Today"
+  if (days === 1) return "1 day ago"
+  if (days < 7) return `${days} days ago`
+
+  const weeks = Math.floor(days / 7)
+  if (weeks === 1) return "1 week ago"
+  if (weeks < 5) return `${weeks} weeks ago`
+
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date)
+}
+
+const formatCurrencyRange = (min?: number | null, max?: number | null) => {
+  const format = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+      notation: value >= 1000 ? "compact" : "standard",
+    }).format(value)
+
+  if (min && max) return `${format(min)} - ${format(max)}`
+  if (min) return `From ${format(min)}`
+  if (max) return `Up to ${format(max)}`
+  return "Salary not specified"
+}
+
+const formatRoleLabel = (role?: string | null) =>
+  role
+    ? role
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ")
+    : "Candidate"
+
+const formatApplicationStatus = (status: JobApplicationRow["status"]) =>
+  status
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+
+const formatJobStatus = (status: JobRow["status"]) => status.charAt(0).toUpperCase() + status.slice(1)
+
 export default function HiringAgencyDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const [agency, setAgency] = useState(fallbackAgency)
@@ -216,6 +267,94 @@ export default function HiringAgencyDashboard() {
   const [profileMessage, setProfileMessage] = useState("")
   const [profileError, setProfileError] = useState("")
   const [profileHistory, setProfileHistory] = useState<CompanyProfileVersionRow[]>([])
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [jobs, setJobs] = useState<JobRow[]>([])
+  const [applications, setApplications] = useState<JobApplicationRow[]>([])
+  const [isHiringDataLoading, setIsHiringDataLoading] = useState(true)
+  const [hiringError, setHiringError] = useState("")
+  const [jobForm, setJobForm] = useState<JobPostFormValues>(emptyJobForm)
+  const [jobFormMessage, setJobFormMessage] = useState("")
+  const [jobFormError, setJobFormError] = useState("")
+  const [isSubmittingJob, setIsSubmittingJob] = useState(false)
+  const [candidateSearch, setCandidateSearch] = useState("")
+
+  const loadHiringData = async (currentCompanyId: string) => {
+    setIsHiringDataLoading(true)
+    setHiringError("")
+
+    const { data: jobsData, error: jobsError } = await supabase
+      .from("jobs")
+      .select(
+        "id, company_id, title, department, location, job_type, experience_level, salary_min, salary_max, description, requirements, benefits, status, views_count, created_at",
+      )
+      .eq("company_id", currentCompanyId)
+      .order("created_at", { ascending: false })
+
+    if (jobsError) {
+      if (!isMissingHiringTablesError(jobsError.message)) {
+        setHiringError(jobsError.message)
+      } else {
+        setHiringError("Run the latest Supabase migration to enable job posting and candidate review.")
+      }
+      setJobs([])
+      setApplications([])
+      setAgency((current) => ({ ...current, activeJobs: 0, totalApplications: 0, hiredCandidates: 0 }))
+      setIsHiringDataLoading(false)
+      return
+    }
+
+    const nextJobs = (jobsData as JobRow[] | null) ?? []
+    setJobs(nextJobs)
+
+    const jobIds = nextJobs.map((job) => job.id)
+
+    if (jobIds.length === 0) {
+      setApplications([])
+      setAgency((current) => ({ ...current, activeJobs: 0, totalApplications: 0, hiredCandidates: 0 }))
+      setIsHiringDataLoading(false)
+      return
+    }
+
+    const { data: applicationsData, error: applicationsError } = await supabase
+      .from("job_applications")
+      .select(
+        "id, job_id, candidate_id, status, match_score, created_at, jobs!inner(title), candidate:profiles!job_applications_candidate_id_fkey(full_name, role, avatar_url)",
+      )
+      .in("job_id", jobIds)
+      .order("created_at", { ascending: false })
+
+    if (applicationsError) {
+      if (!isMissingHiringTablesError(applicationsError.message)) {
+        setHiringError(applicationsError.message)
+      } else {
+        setHiringError("Run the latest Supabase migration to enable candidate review.")
+      }
+      setApplications([])
+      setAgency((current) => ({
+        ...current,
+        activeJobs: nextJobs.filter((job) => job.status === "active").length,
+        totalApplications: 0,
+        hiredCandidates: 0,
+      }))
+      setIsHiringDataLoading(false)
+      return
+    }
+
+    const nextApplications =
+      ((applicationsData as JobApplicationQueryRow[] | null) ?? []).map((application) => ({
+        ...application,
+        jobs: Array.isArray(application.jobs) ? application.jobs[0] ?? null : application.jobs,
+        candidate: Array.isArray(application.candidate) ? application.candidate[0] ?? null : application.candidate,
+      })) as JobApplicationRow[]
+    setApplications(nextApplications)
+    setAgency((current) => ({
+      ...current,
+      activeJobs: nextJobs.filter((job) => job.status === "active").length,
+      totalApplications: nextApplications.length,
+      hiredCandidates: nextApplications.filter((application) => application.status === "hired").length,
+    }))
+    setIsHiringDataLoading(false)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -324,6 +463,7 @@ export default function HiringAgencyDashboard() {
 
       if (!isMounted) return
 
+      setCompanyId(company?.id ?? null)
       setCompanyForm(mappedForm)
       setAgency({
         ...fallbackAgency,
@@ -337,6 +477,14 @@ export default function HiringAgencyDashboard() {
         profileViews: company?.profile_views ?? fallbackAgency.profileViews,
         verified: company?.verified ?? fallbackAgency.verified,
       })
+
+      if (company?.id) {
+        await loadHiringData(company.id)
+      } else {
+        setJobs([])
+        setApplications([])
+        setIsHiringDataLoading(false)
+      }
 
       if (company?.id) {
         const { data: versionData, error: versionError } = await supabase
@@ -590,6 +738,7 @@ export default function HiringAgencyDashboard() {
       }
 
       setCompanyForm(nextForm)
+      setCompanyId(savedCompany.id)
       setAgency((current) => ({
         ...current,
         name: nextForm.name,
@@ -608,12 +757,108 @@ export default function HiringAgencyDashboard() {
           : "Company profile saved successfully.",
       )
       setEditorOpen(false)
+
+      await loadHiringData(savedCompany.id)
     } finally {
       setIsSavingProfile(false)
     }
   }
 
-  const successRate = Math.round((agency.hiredCandidates / agency.totalApplications) * 100)
+  const handleJobFormChange = (field: keyof JobPostFormValues, value: string) => {
+    setJobForm((current) => ({ ...current, [field]: value }))
+  }
+
+  const handlePostJob = async (status: "active" | "draft") => {
+    setJobFormError("")
+    setJobFormMessage("")
+
+    if (!companyId) {
+      setJobFormError("Save your company profile first so we know which agency should own the job.")
+      setActiveTab("post-job")
+      return
+    }
+
+    if (!jobForm.title.trim()) {
+      setJobFormError("Job title is required.")
+      return
+    }
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      setJobFormError("Your session has expired. Please sign in again.")
+      return
+    }
+
+    setIsSubmittingJob(true)
+
+    const salaryMin = Number.parseInt(jobForm.salaryMin, 10)
+    const salaryMax = Number.parseInt(jobForm.salaryMax, 10)
+
+    const payload = {
+      company_id: companyId,
+      created_by: user.id,
+      title: jobForm.title.trim(),
+      department: jobForm.department.trim() || null,
+      location: jobForm.location.trim() || null,
+      job_type: jobForm.jobType || null,
+      experience_level: jobForm.experienceLevel || null,
+      salary_min: Number.isNaN(salaryMin) ? null : salaryMin,
+      salary_max: Number.isNaN(salaryMax) ? null : salaryMax,
+      description: jobForm.description.trim() || null,
+      requirements: jobForm.requirements.trim() || null,
+      benefits: jobForm.benefits.trim() || null,
+      status,
+    }
+
+    const { error } = await supabase.from("jobs").insert(payload)
+
+    if (error) {
+      setJobFormError(
+        isMissingHiringTablesError(error.message)
+          ? "Run the latest Supabase migration to save jobs to the database."
+          : error.message,
+      )
+      setIsSubmittingJob(false)
+      return
+    }
+
+    setJobForm(emptyJobForm)
+    setJobFormMessage(status === "active" ? "Job published and added to your dashboard." : "Job saved as draft.")
+    await loadHiringData(companyId)
+    setActiveTab("jobs")
+    setIsSubmittingJob(false)
+  }
+
+  const jobsWithCounts = useMemo(() => {
+    const counts = applications.reduce<Record<string, number>>((accumulator, application) => {
+      accumulator[application.job_id] = (accumulator[application.job_id] ?? 0) + 1
+      return accumulator
+    }, {})
+
+    return jobs.map((job) => ({
+      ...job,
+      applicationsCount: counts[job.id] ?? 0,
+    }))
+  }, [applications, jobs])
+
+  const filteredApplications = useMemo(() => {
+    const query = candidateSearch.trim().toLowerCase()
+
+    if (!query) return applications
+
+    return applications.filter((application) => {
+      const candidateName = application.candidate?.full_name?.toLowerCase() ?? ""
+      const role = formatRoleLabel(application.candidate?.role).toLowerCase()
+      const jobTitle = application.jobs?.title?.toLowerCase() ?? ""
+      return candidateName.includes(query) || role.includes(query) || jobTitle.includes(query)
+    })
+  }, [applications, candidateSearch])
+
+  const successRate = agency.totalApplications > 0 ? Math.round((agency.hiredCandidates / agency.totalApplications) * 100) : 0
   const initials =
     agency.name
       .split(" ")
@@ -638,7 +883,7 @@ export default function HiringAgencyDashboard() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <Button>
+            <Button onClick={() => setActiveTab("post-job")}>
               <Plus className="mr-2 h-4 w-4" />
               Post Job
             </Button>
@@ -832,14 +1077,14 @@ export default function HiringAgencyDashboard() {
                   <CardContent className="p-6">
                     <h2 className="mb-2 text-xl font-semibold">Welcome to your hiring dashboard</h2>
                     <p className="mb-4 text-muted-foreground">
-                      You have 15 new applications and 3 candidates ready for interviews.
+                      Track your latest openings and review incoming candidates from one place.
                     </p>
                     <div className="flex gap-4">
-                      <Button>
+                      <Button onClick={() => setActiveTab("candidates")}>
                         <Users className="mr-2 h-4 w-4" />
                         Review Candidates
                       </Button>
-                      <Button variant="outline">
+                      <Button variant="outline" onClick={() => setActiveTab("post-job")}>
                         <Plus className="mr-2 h-4 w-4" />
                         Post New Job
                       </Button>
@@ -847,102 +1092,122 @@ export default function HiringAgencyDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Recent Applications
-                    </CardTitle>
-                    <CardDescription>Latest candidates who applied to your positions</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {candidates.slice(0, 3).map((candidate) => (
-                      <div
-                        key={candidate.id}
-                        className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
-                      >
-                        <div className="flex items-center gap-4">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={candidate.avatar || "/placeholder.svg"} alt={candidate.name} />
-                            <AvatarFallback>
-                              {candidate.name
-                                .split(" ")
-                                .map((name) => name[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="font-medium">{candidate.name}</h4>
-                            <p className="text-sm text-muted-foreground">{candidate.title}</p>
-                            <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {candidate.location}
-                              </span>
-                              <span>{candidate.experience} experience</span>
-                              <span>Applied for: {candidate.appliedFor}</span>
+                {hiringError && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    {hiringError}
+                  </div>
+                )}
+
+                <div className="grid gap-6 xl:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Briefcase className="h-5 w-5" />
+                        Jobs Posted
+                      </CardTitle>
+                      <CardDescription>Latest jobs saved for your agency</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {jobsWithCounts.length > 0 ? (
+                        jobsWithCounts.slice(0, 4).map((job) => (
+                          <div key={job.id} className="rounded-lg border border-border p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <h4 className="font-medium">{job.title}</h4>
+                                <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {job.location || "Location not set"}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <DollarSign className="h-3 w-3" />
+                                    {formatCurrencyRange(job.salary_min, job.salary_max)}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {formatRelativeDate(job.created_at)}
+                                  </span>
+                                </div>
+                              </div>
+                              <Badge variant="outline">{formatJobStatus(job.status)}</Badge>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">{job.applicationsCount} applications</span>
+                              <Button variant="ghost" size="sm" onClick={() => setActiveTab("jobs")}>
+                                View all
+                              </Button>
                             </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                          {isHiringDataLoading ? "Loading jobs..." : "No jobs posted yet. Use Post Job to add one to the database."}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Badge variant="secondary" className="text-xs">
-                            {candidate.match}% match
-                          </Badge>
-                          <Badge variant={candidate.status === "New Application" ? "default" : "outline"} className="text-xs">
-                            {candidate.status}
-                          </Badge>
-                          <Button size="sm">Review</Button>
-                        </div>
-                      </div>
-                    ))}
-                    <Button variant="outline" className="w-full bg-transparent">
-                      View All Applications
-                    </Button>
-                  </CardContent>
-                </Card>
+                      )}
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Briefcase className="h-5 w-5" />
-                      Active Job Postings
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {jobPostings.slice(0, 3).map((job) => (
-                      <div key={job.id} className="flex items-center justify-between rounded-lg border border-border p-4">
-                        <div>
-                          <h4 className="font-medium">{job.title}</h4>
-                          <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {job.location}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              {job.salary}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {job.posted}
-                            </span>
-                          </div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Candidates
+                      </CardTitle>
+                      <CardDescription>Recent applications from candidates</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {applications.length > 0 ? (
+                        applications.slice(0, 4).map((application) => {
+                          const candidateName = application.candidate?.full_name || "Candidate"
+                          const candidateInitials =
+                            candidateName
+                              .split(" ")
+                              .filter(Boolean)
+                              .map((part) => part[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase() || "CA"
+
+                          return (
+                            <div key={application.id} className="rounded-lg border border-border p-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-12 w-12">
+                                    <AvatarImage src={application.candidate?.avatar_url || "/placeholder.svg"} alt={candidateName} />
+                                    <AvatarFallback>{candidateInitials}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <h4 className="font-medium">{candidateName}</h4>
+                                    <p className="text-sm text-muted-foreground">{formatRoleLabel(application.candidate?.role)}</p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Applied for: {application.jobs?.title || "Untitled job"}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  {application.match_score !== null && <Badge variant="secondary">{application.match_score}% match</Badge>}
+                                  <Badge variant={application.status === "new" ? "default" : "outline"}>
+                                    {formatApplicationStatus(application.status)}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{formatRelativeDate(application.created_at)}</span>
+                                <Button variant="ghost" size="sm" onClick={() => setActiveTab("candidates")}>
+                                  Review
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        })
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                          {isHiringDataLoading ? "Loading candidates..." : "Candidate applications will appear here once people apply."}
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="text-center">
-                            <div className="font-medium">{job.applications}</div>
-                            <div className="text-muted-foreground">Applications</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-medium">{job.views}</div>
-                            <div className="text-muted-foreground">Views</div>
-                          </div>
-                          <Badge variant="outline">{job.status}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent value="jobs" className="space-y-6">
@@ -953,7 +1218,7 @@ export default function HiringAgencyDashboard() {
                         <CardTitle>Job Postings</CardTitle>
                         <CardDescription>Manage your active and draft job postings</CardDescription>
                       </div>
-                      <Button>
+                      <Button onClick={() => setActiveTab("post-job")}>
                         <Plus className="mr-2 h-4 w-4" />
                         Post New Job
                       </Button>
@@ -961,59 +1226,65 @@ export default function HiringAgencyDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {jobPostings.map((job) => (
-                        <div key={job.id} className="rounded-lg border border-border p-6 transition-colors hover:bg-muted/50">
-                          <div className="mb-4 flex items-start justify-between">
-                            <div>
-                              <h3 className="text-lg font-semibold">{job.title}</h3>
-                              <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-4 w-4" />
-                                  {job.location}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <DollarSign className="h-4 w-4" />
-                                  {job.salary}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Briefcase className="h-4 w-4" />
-                                  {job.type}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4" />
-                                  {job.posted}
-                                </span>
+                      {jobsWithCounts.length > 0 ? (
+                        jobsWithCounts.map((job) => (
+                          <div key={job.id} className="rounded-lg border border-border p-6 transition-colors hover:bg-muted/50">
+                            <div className="mb-4 flex items-start justify-between">
+                              <div>
+                                <h3 className="text-lg font-semibold">{job.title}</h3>
+                                <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-4 w-4" />
+                                    {job.location || "Location not set"}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <DollarSign className="h-4 w-4" />
+                                    {formatCurrencyRange(job.salary_min, job.salary_max)}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Briefcase className="h-4 w-4" />
+                                    {job.job_type || "Type not set"}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-4 w-4" />
+                                    {formatRelativeDate(job.created_at)}
+                                  </span>
+                                </div>
                               </div>
+                              <Badge variant="outline">{formatJobStatus(job.status)}</Badge>
                             </div>
-                            <Badge variant="outline">{job.status}</Badge>
-                          </div>
 
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-6 text-sm">
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span>{job.applications} applications</span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-6 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                  <span>{job.applicationsCount} applications</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Eye className="h-4 w-4 text-muted-foreground" />
+                                  <span>{job.views_count ?? 0} views</span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Eye className="h-4 w-4 text-muted-foreground" />
-                                <span>{job.views} views</span>
+                              <div className="flex items-center gap-3">
+                                <Button variant="outline" size="sm" onClick={() => setActiveTab("post-job")}>
+                                  Edit
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => setActiveTab("candidates")}>
+                                  View Applications
+                                </Button>
+                                <Button size="sm" onClick={() => setActiveTab("analytics")}>
+                                  <BarChart3 className="mr-2 h-4 w-4" />
+                                  Analytics
+                                </Button>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Button variant="outline" size="sm">
-                                Edit
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                View Applications
-                              </Button>
-                              <Button size="sm">
-                                <BarChart3 className="mr-2 h-4 w-4" />
-                                Analytics
-                              </Button>
                             </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                          {isHiringDataLoading ? "Loading jobs..." : "No jobs posted yet."}
                         </div>
-                      ))}
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1034,66 +1305,90 @@ export default function HiringAgencyDashboard() {
                         </Button>
                         <div className="relative">
                           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input placeholder="Search candidates..." className="w-64 pl-10" />
+                          <Input
+                            placeholder="Search candidates..."
+                            className="w-64 pl-10"
+                            value={candidateSearch}
+                            onChange={(event) => setCandidateSearch(event.target.value)}
+                          />
                         </div>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {candidates.map((candidate) => (
-                        <div key={candidate.id} className="rounded-lg border border-border p-6 transition-colors hover:bg-muted/50">
-                          <div className="mb-4 flex items-start justify-between">
-                            <div className="flex items-center gap-4">
-                              <Avatar className="h-16 w-16">
-                                <AvatarImage src={candidate.avatar || "/placeholder.svg"} alt={candidate.name} />
-                                <AvatarFallback>
-                                  {candidate.name
-                                    .split(" ")
-                                    .map((name) => name[0])
-                                    .join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <h3 className="text-lg font-semibold">{candidate.name}</h3>
-                                <p className="text-muted-foreground">{candidate.title}</p>
-                                <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                                  <span className="flex items-center gap-1">
-                                    <MapPin className="h-4 w-4" />
-                                    {candidate.location}
-                                  </span>
-                                  <span>{candidate.experience} experience</span>
+                      {filteredApplications.length > 0 ? (
+                        filteredApplications.map((application) => {
+                          const candidateName = application.candidate?.full_name || "Candidate"
+                          const candidateInitials =
+                            candidateName
+                              .split(" ")
+                              .filter(Boolean)
+                              .map((part) => part[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase() || "CA"
+
+                          return (
+                            <div key={application.id} className="rounded-lg border border-border p-6 transition-colors hover:bg-muted/50">
+                              <div className="mb-4 flex items-start justify-between">
+                                <div className="flex items-center gap-4">
+                                  <Avatar className="h-16 w-16">
+                                    <AvatarImage
+                                      src={application.candidate?.avatar_url || "/placeholder.svg"}
+                                      alt={candidateName}
+                                    />
+                                    <AvatarFallback>{candidateInitials}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <h3 className="text-lg font-semibold">{candidateName}</h3>
+                                    <p className="text-muted-foreground">{formatRoleLabel(application.candidate?.role)}</p>
+                                    <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+                                      <span className="flex items-center gap-1">
+                                        <Clock className="h-4 w-4" />
+                                        Applied {formatRelativeDate(application.created_at)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {application.match_score !== null && (
+                                    <Badge variant="secondary">{application.match_score}% match</Badge>
+                                  )}
+                                  <Badge variant={application.status === "new" ? "default" : "outline"}>
+                                    {formatApplicationStatus(application.status)}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm text-muted-foreground">
+                                    Applied for: {application.jobs?.title || "Untitled job"}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <Button variant="outline" size="sm">
+                                    View Profile
+                                  </Button>
+                                  <Button variant="outline" size="sm">
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    Message
+                                  </Button>
+                                  <Button size="sm">
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    Schedule Interview
+                                  </Button>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <Badge variant="secondary">{candidate.match}% match</Badge>
-                              <Badge variant={candidate.status === "New Application" ? "default" : "outline"}>
-                                {candidate.status}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm text-muted-foreground">Applied for: {candidate.appliedFor}</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Button variant="outline" size="sm">
-                                View Profile
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                Message
-                              </Button>
-                              <Button size="sm">
-                                <Calendar className="mr-2 h-4 w-4" />
-                                Schedule Interview
-                              </Button>
-                            </div>
-                          </div>
+                          )
+                        })
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                          {isHiringDataLoading ? "Loading candidates..." : "No candidate applications found."}
                         </div>
-                      ))}
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1148,15 +1443,26 @@ export default function HiringAgencyDashboard() {
                     <CardDescription>Create a new job posting to attract top real estate talent</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form className="space-y-6">
+                    <form
+                      className="space-y-6"
+                      onSubmit={async (event) => {
+                        event.preventDefault()
+                        await handlePostJob("active")
+                      }}
+                    >
                       <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="jobTitle">Job Title</Label>
-                          <Input id="jobTitle" placeholder="e.g. Senior Real Estate Agent" />
+                          <Input
+                            id="jobTitle"
+                            placeholder="e.g. Senior Real Estate Agent"
+                            value={jobForm.title}
+                            onChange={(event) => handleJobFormChange("title", event.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="department">Department</Label>
-                          <Select>
+                          <Select value={jobForm.department} onValueChange={(value) => handleJobFormChange("department", value)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select department" />
                             </SelectTrigger>
@@ -1174,11 +1480,16 @@ export default function HiringAgencyDashboard() {
                       <div className="grid gap-6 md:grid-cols-3">
                         <div className="space-y-2">
                           <Label htmlFor="location">Location</Label>
-                          <Input id="location" placeholder="e.g. New York, NY" />
+                          <Input
+                            id="location"
+                            placeholder="e.g. New York, NY"
+                            value={jobForm.location}
+                            onChange={(event) => handleJobFormChange("location", event.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="jobType">Job Type</Label>
-                          <Select>
+                          <Select value={jobForm.jobType} onValueChange={(value) => handleJobFormChange("jobType", value)}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
@@ -1192,7 +1503,10 @@ export default function HiringAgencyDashboard() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="experience">Experience Level</Label>
-                          <Select>
+                          <Select
+                            value={jobForm.experienceLevel}
+                            onValueChange={(value) => handleJobFormChange("experienceLevel", value)}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Select level" />
                             </SelectTrigger>
@@ -1209,11 +1523,23 @@ export default function HiringAgencyDashboard() {
                       <div className="grid gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="salaryMin">Minimum Salary</Label>
-                          <Input id="salaryMin" placeholder="e.g. 80000" type="number" />
+                          <Input
+                            id="salaryMin"
+                            placeholder="e.g. 80000"
+                            type="number"
+                            value={jobForm.salaryMin}
+                            onChange={(event) => handleJobFormChange("salaryMin", event.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="salaryMax">Maximum Salary</Label>
-                          <Input id="salaryMax" placeholder="e.g. 120000" type="number" />
+                          <Input
+                            id="salaryMax"
+                            placeholder="e.g. 120000"
+                            type="number"
+                            value={jobForm.salaryMax}
+                            onChange={(event) => handleJobFormChange("salaryMax", event.target.value)}
+                          />
                         </div>
                       </div>
 
@@ -1223,6 +1549,8 @@ export default function HiringAgencyDashboard() {
                           id="description"
                           placeholder="Describe the role, responsibilities, and what you're looking for in a candidate..."
                           rows={6}
+                          value={jobForm.description}
+                          onChange={(event) => handleJobFormChange("description", event.target.value)}
                         />
                       </div>
 
@@ -1232,6 +1560,8 @@ export default function HiringAgencyDashboard() {
                           id="requirements"
                           placeholder="List the required qualifications, skills, and experience..."
                           rows={4}
+                          value={jobForm.requirements}
+                          onChange={(event) => handleJobFormChange("requirements", event.target.value)}
                         />
                       </div>
 
@@ -1241,17 +1571,38 @@ export default function HiringAgencyDashboard() {
                           id="benefits"
                           placeholder="Describe the benefits, perks, and what makes your company great..."
                           rows={3}
+                          value={jobForm.benefits}
+                          onChange={(event) => handleJobFormChange("benefits", event.target.value)}
                         />
                       </div>
 
+                      {(jobFormMessage || jobFormError) && (
+                        <div
+                          className={`rounded-2xl border px-4 py-3 text-sm ${
+                            jobFormError
+                              ? "border-red-200 bg-red-50 text-red-700"
+                              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          }`}
+                        >
+                          {jobFormError || jobFormMessage}
+                        </div>
+                      )}
+
                       <div className="flex gap-4">
-                        <Button type="submit" className="bg-primary hover:bg-primary/90">
+                        <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmittingJob}>
                           Publish Job
                         </Button>
-                        <Button type="button" variant="outline">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={isSubmittingJob}
+                          onClick={async () => {
+                            await handlePostJob("draft")
+                          }}
+                        >
                           Save as Draft
                         </Button>
-                        <Button type="button" variant="outline">
+                        <Button type="button" variant="outline" disabled>
                           Preview
                         </Button>
                       </div>
