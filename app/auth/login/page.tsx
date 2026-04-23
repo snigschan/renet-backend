@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -42,36 +43,59 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
   const router = useRouter()
+
+  const getRedirectPath = async (userId: string, fallbackAccountType?: string) => {
+    const { data } = await supabase.from("profiles").select("account_type").eq("id", userId).maybeSingle()
+    const accountType = data?.account_type ?? fallbackAccountType
+    return accountType === "individual" ? "/dashboard/job-seeker" : "/dashboard/hiring-agency"
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrorMessage("")
     setIsLoading(true)
 
-    // Simulate login process
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      const redirectPath = await getRedirectPath(data.user.id, data.user.user_metadata?.account_type)
+      router.push(redirectPath)
+      router.refresh()
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to sign in.")
+    } finally {
       setIsLoading(false)
-      // For demo purposes, redirect to job seeker dashboard
-      router.push("/dashboard/job-seeker")
-    }, 1500)
+    }
   }
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
+    setErrorMessage("")
     setIsLoading(true)
-    // In production, this would redirect to Google OAuth
-    console.log("[v0] Initiating Google OAuth login")
-    setTimeout(() => {
-      router.push("/dashboard/job-seeker")
-    }, 1500)
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard/job-seeker`,
+      },
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsLoading(false)
+    }
   }
 
   const handleLinkedInLogin = () => {
-    setIsLoading(true)
-    // In production, this would redirect to LinkedIn OAuth
-    console.log("[v0] Initiating LinkedIn OAuth login")
-    setTimeout(() => {
-      router.push("/dashboard/job-seeker")
-    }, 1500)
+    setErrorMessage("LinkedIn sign in is not configured in Supabase yet.")
   }
 
   return (
@@ -177,6 +201,12 @@ export default function LoginPage() {
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
+
+            {errorMessage && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            )}
 
             <div className="mt-6 text-center text-sm">
               <span className="text-muted-foreground">Don't have an account? </span>

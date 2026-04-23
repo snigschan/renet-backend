@@ -3,7 +3,22 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Video, Play, BookOpen, Brain, CheckCircle, Clock, TrendingUp, Building2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+  Video,
+  Play,
+  BookOpen,
+  Brain,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  Building2,
+  Search,
+  Sparkles,
+  Target,
+  Lightbulb,
+  ArrowRight,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
@@ -70,6 +85,33 @@ export default function InterviewHubPage() {
   const [recordingMock, setRecordingMock] = useState(false)
   const [mockCompleted, setMockCompleted] = useState(false)
   const [aiScore, setAiScore] = useState<any>(null)
+  const [questionSearch, setQuestionSearch] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("All")
+
+  const categories = ["All", ...new Set(interviewQuestions.map((question) => question.category))]
+  const filteredQuestions = interviewQuestions.filter((question) => {
+    const matchesCategory = selectedCategory === "All" || question.category === selectedCategory
+    const matchesSearch =
+      question.question.toLowerCase().includes(questionSearch.toLowerCase()) ||
+      question.category.toLowerCase().includes(questionSearch.toLowerCase())
+
+    return matchesCategory && matchesSearch
+  })
+
+  const selectedQuestionIndex = interviewQuestions.findIndex((question) => question.id === selectedQuestion.id)
+  const learningProgress = ((selectedQuestionIndex + 1) / interviewQuestions.length) * 100
+  const difficultyTone =
+    selectedQuestion.difficulty === "Easy"
+      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+      : selectedQuestion.difficulty === "Medium"
+        ? "border-primary/20 bg-primary/10 text-primary"
+        : "border-rose-500/20 bg-rose-500/10 text-rose-700"
+  const questionCardTone = (difficulty: string) =>
+    difficulty === "Easy"
+      ? "from-emerald-500/10 via-background to-background"
+      : difficulty === "Medium"
+        ? "from-primary/10 via-background to-background"
+        : "from-rose-500/10 via-background to-background"
 
   const handleStartMockInterview = () => {
     setRecordingMock(true)
@@ -118,75 +160,220 @@ export default function InterviewHubPage() {
             <div className="grid lg:grid-cols-3 gap-6">
               {/* Questions List */}
               <div className="lg:col-span-1">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Questions ({interviewQuestions.length})</CardTitle>
-                    <CardDescription>Filter by category</CardDescription>
+                <Card className="overflow-hidden border-primary/10 shadow-sm">
+                  <CardHeader className="border-b bg-gradient-to-br from-primary/10 via-primary/5 to-background">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <BookOpen className="h-5 w-5 text-primary" />
+                          Questions ({filteredQuestions.length})
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          Explore by category, difficulty, and what you want to practice next.
+                        </CardDescription>
+                      </div>
+                      <div className="rounded-2xl border border-primary/20 bg-background/80 px-3 py-2 text-right shadow-sm">
+                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Progress</p>
+                        <p className="text-lg font-semibold text-foreground">{Math.round(learningProgress)}%</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-4">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={questionSearch}
+                          onChange={(e) => setQuestionSearch(e.target.value)}
+                          placeholder="Search a topic or question..."
+                          className="pl-9"
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {categories.map((category) => (
+                          <Button
+                            key={category}
+                            type="button"
+                            variant={selectedCategory === category ? "default" : "outline"}
+                            size="sm"
+                            className="rounded-full"
+                            onClick={() => setSelectedCategory(category)}
+                          >
+                            {category}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    {interviewQuestions.map((q) => (
-                      <Card
-                        key={q.id}
-                        className={`cursor-pointer transition-all ${selectedQuestion.id === q.id ? "border-primary border-2" : ""}`}
-                        onClick={() => {
-                          setSelectedQuestion(q)
-                          setShowAnswer(false)
-                        }}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <Badge variant="secondary">{q.category}</Badge>
-                            <Badge
-                              variant={
-                                q.difficulty === "Easy"
-                                  ? "outline"
-                                  : q.difficulty === "Medium"
-                                    ? "secondary"
-                                    : "default"
-                              }
-                            >
-                              {q.difficulty}
-                            </Badge>
+                  <CardContent className="space-y-3 p-4">
+                    {filteredQuestions.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed p-6 text-center">
+                        <p className="font-medium text-foreground">No matching questions yet</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Try another category or search term to keep practicing.
+                        </p>
+                      </div>
+                    ) : (
+                      filteredQuestions.map((q, index) => (
+                        <button
+                          key={q.id}
+                          type="button"
+                          className={`w-full rounded-2xl border bg-gradient-to-br p-0 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                            selectedQuestion.id === q.id
+                              ? "border-primary shadow-lg ring-2 ring-primary/20"
+                              : "border-border/70 hover:border-primary/30"
+                          } ${questionCardTone(q.difficulty)}`}
+                          onClick={() => {
+                            setSelectedQuestion(q)
+                            setShowAnswer(false)
+                          }}
+                        >
+                          <div className="p-4">
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                                  Question {index + 1}
+                                </p>
+                                <Badge variant="secondary" className="mt-2">
+                                  {q.category}
+                                </Badge>
+                              </div>
+                              <Badge
+                                className={
+                                  q.difficulty === "Easy"
+                                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+                                    : q.difficulty === "Medium"
+                                      ? "border-primary/20 bg-primary/10 text-primary"
+                                      : "border-rose-500/20 bg-rose-500/10 text-rose-700"
+                                }
+                                variant="outline"
+                              >
+                                {q.difficulty}
+                              </Badge>
+                            </div>
+                            <p className="text-sm font-semibold leading-6 text-foreground">{q.question}</p>
+                            <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Tap to preview answer strategy</span>
+                              <ArrowRight className="h-4 w-4" />
+                            </div>
                           </div>
-                          <p className="text-sm font-medium line-clamp-2">{q.question}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </button>
+                      ))
+                    )}
                   </CardContent>
                 </Card>
               </div>
 
               {/* Question Detail */}
               <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
+                <Card className="overflow-hidden border-primary/10 shadow-sm">
+                  <CardHeader className="border-b bg-gradient-to-br from-background via-primary/5 to-primary/10">
                     <div className="flex items-start justify-between">
                       <div>
-                        <Badge variant="secondary" className="mb-2">
-                          {selectedQuestion.category}
-                        </Badge>
-                        <CardTitle className="text-xl">{selectedQuestion.question}</CardTitle>
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary">{selectedQuestion.category}</Badge>
+                          <Badge variant="outline" className={difficultyTone}>
+                            {selectedQuestion.difficulty}
+                          </Badge>
+                          <Badge variant="outline" className="border-primary/20 bg-background/80 text-foreground">
+                            <Sparkles className="mr-1 h-3 w-3 text-primary" />
+                            Recruiter favorite
+                          </Badge>
+                        </div>
+                        <CardTitle className="text-2xl leading-tight">{selectedQuestion.question}</CardTitle>
+                        <CardDescription className="mt-3 max-w-2xl text-sm leading-6">
+                          Learn the intent behind the question, shape a confident answer, and rehearse it in a way
+                          that sounds natural in real interviews.
+                        </CardDescription>
                       </div>
-                      <Badge
-                        variant={
-                          selectedQuestion.difficulty === "Easy"
-                            ? "outline"
-                            : selectedQuestion.difficulty === "Medium"
-                              ? "secondary"
-                              : "default"
-                        }
-                      >
-                        {selectedQuestion.difficulty}
-                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                          <Target className="h-5 w-5 text-primary" />
+                        </div>
+                        <p className="font-semibold text-foreground">What they assess</p>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          Confidence, relevance, and whether you can guide clients with clarity under pressure.
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                          <Clock className="h-5 w-5 text-primary" />
+                        </div>
+                        <p className="font-semibold text-foreground">Best answer length</p>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          Aim for 60 to 90 seconds with one clear example and one measurable outcome.
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                          <TrendingUp className="h-5 w-5 text-primary" />
+                        </div>
+                        <p className="font-semibold text-foreground">How to stand out</p>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          Use market context, negotiation judgment, and a result that shows client trust.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+                      <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 rounded-xl bg-primary/10 p-2">
+                            <Brain className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">Interview Tips</p>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">{selectedQuestion.tips}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-border/70 bg-muted/30 p-5">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 rounded-xl bg-background p-2 shadow-sm">
+                            <Lightbulb className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">Quick structure</p>
+                            <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                              <li>1. Explain the client situation briefly</li>
+                              <li>2. Share the action you took</li>
+                              <li>3. End with the result or lesson</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-border/70 bg-background p-5 shadow-sm">
                       <div className="flex items-start gap-2">
-                        <Brain className="h-5 w-5 text-primary mt-0.5" />
+                        <Sparkles className="mt-0.5 h-5 w-5 text-primary" />
                         <div>
-                          <p className="font-medium mb-1">Interview Tips</p>
-                          <p className="text-sm text-muted-foreground">{selectedQuestion.tips}</p>
+                          <p className="font-medium text-foreground">Learning path for this question</p>
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <div className="rounded-xl border bg-muted/30 p-4">
+                              <p className="text-sm font-semibold text-foreground">Read the prompt</p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                Identify what skill the interviewer is really testing.
+                              </p>
+                            </div>
+                            <div className="rounded-xl border bg-muted/30 p-4">
+                              <p className="text-sm font-semibold text-foreground">Shape your answer</p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                Build a simple story with problem, action, and result.
+                              </p>
+                            </div>
+                            <div className="rounded-xl border bg-muted/30 p-4">
+                              <p className="text-sm font-semibold text-foreground">Practice on video</p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                Rehearse tone, confidence, and pacing until it feels natural.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -197,15 +384,15 @@ export default function InterviewHubPage() {
                       </Button>
 
                       {showAnswer && (
-                        <div className="bg-muted/50 rounded-lg p-4">
-                          <p className="text-sm font-medium mb-2">Sample Answer:</p>
-                          <p className="text-sm text-muted-foreground">{selectedQuestion.sampleAnswer}</p>
+                        <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-background to-primary/5 p-5">
+                          <p className="mb-2 text-sm font-semibold text-foreground">Sample Answer</p>
+                          <p className="text-sm leading-7 text-muted-foreground">{selectedQuestion.sampleAnswer}</p>
                         </div>
                       )}
                     </div>
 
                     <div className="pt-4 border-t">
-                      <Button className="w-full">
+                      <Button className="h-12 w-full text-base shadow-sm">
                         <Video className="h-4 w-4 mr-2" />
                         Practice This Question (Video)
                       </Button>

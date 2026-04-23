@@ -25,3 +25,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+NEXT_PUBLIC_SUPABASE_URL=https://tqblhxikpkbvaijzkjon.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxYmxoeGlrcGtidmFpanpram9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2Nzk2MjYsImV4cCI6MjA5MjI1NTYyNn0.bWwEWEsHG5lgt1a05M-a0TvsdRQAysooCVhMENr83hY

@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -53,38 +54,80 @@ export default function RegisterPage() {
     agreeToTerms: false,
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
   const router = useRouter()
+
+  const getRedirectPath = (accountType: string) => {
+    return accountType === "individual" ? "/dashboard/job-seeker" : "/dashboard/hiring-agency"
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setErrorMessage("")
+    setSuccessMessage("")
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage("Passwords do not match.")
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate registration process
-    setTimeout(() => {
-      setIsLoading(false)
-      // Redirect based on account type
-      if (formData.accountType === "job-seeker") {
-        router.push("/dashboard/job-seeker")
-      } else {
-        router.push("/dashboard/hiring-agency")
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            full_name: `${formData.firstName} ${formData.lastName}`.trim(),
+            phone: formData.phone,
+            role: formData.userType,
+            account_type: formData.accountType,
+          },
+        },
+      })
+
+      if (error) {
+        throw error
       }
-    }, 2000)
+
+      if (data.session) {
+        router.push(getRedirectPath(formData.accountType))
+        router.refresh()
+        return
+      }
+
+      setSuccessMessage("Account created. Check your email if confirmation is required before signing in.")
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to create account.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
+    setErrorMessage("")
+    setSuccessMessage("")
     setIsLoading(true)
-    console.log("[v0] Initiating Google OAuth signup")
-    setTimeout(() => {
-      router.push("/dashboard/job-seeker")
-    }, 1500)
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard/job-seeker`,
+      },
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+      setIsLoading(false)
+    }
   }
 
   const handleLinkedInSignup = () => {
-    setIsLoading(true)
-    console.log("[v0] Initiating LinkedIn OAuth signup")
-    setTimeout(() => {
-      router.push("/dashboard/job-seeker")
-    }, 1500)
+    setErrorMessage("LinkedIn sign up is not configured in Supabase yet.")
   }
 
   const updateFormData = (field: string, value: string | boolean) => {
@@ -161,16 +204,22 @@ export default function RegisterPage() {
                     <SelectValue placeholder="Select account type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="job-seeker">
+                    <SelectItem value="individual">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4" />
-                        Job Seeker - Looking for opportunities
+                        Individual - Broker or agent
                       </div>
                     </SelectItem>
-                    <SelectItem value="hiring-agency">
+                    <SelectItem value="agency">
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4" />
-                        Hiring Agency - Posting jobs
+                        Agency - Brokerage or firm
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="developer_company">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4" />
+                        Developer - Property developer
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -314,11 +363,23 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary/90"
-                disabled={isLoading || !formData.agreeToTerms || !formData.accountType}
+                disabled={isLoading || !formData.agreeToTerms || !formData.accountType || !formData.userType}
               >
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
+
+            {(errorMessage || successMessage) && (
+              <div
+                className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
+                  errorMessage
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {errorMessage || successMessage}
+              </div>
+            )}
 
             <div className="mt-6">
               <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
