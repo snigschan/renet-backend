@@ -51,14 +51,29 @@ const fallbackAgency = {
   verified: true,
 }
 
+const loadingAgency = {
+  name: "",
+  logo: "",
+  location: "",
+  employees: "",
+  founded: "",
+  website: "",
+  description: "",
+  activeJobs: 0,
+  totalApplications: 0,
+  hiredCandidates: 0,
+  profileViews: 0,
+  verified: false,
+}
+
 const emptyCompanyForm: CompanyProfileFormValues = {
-  name: fallbackAgency.name,
-  location: fallbackAgency.location,
-  website: fallbackAgency.website,
-  employee_count_range: fallbackAgency.employees,
-  founded_year: fallbackAgency.founded,
-  description: fallbackAgency.description,
-  logo_url: fallbackAgency.logo,
+  name: "",
+  location: "",
+  website: "",
+  employee_count_range: "",
+  founded_year: "",
+  description: "",
+  logo_url: "",
 }
 
 const createSlug = (value: string, userId: string) => {
@@ -259,7 +274,7 @@ const formatJobStatus = (status: JobRow["status"]) => status.charAt(0).toUpperCa
 
 export default function HiringAgencyDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
-  const [agency, setAgency] = useState(fallbackAgency)
+  const [agency, setAgency] = useState(loadingAgency)
   const [companyForm, setCompanyForm] = useState<CompanyProfileFormValues>(emptyCompanyForm)
   const [editorOpen, setEditorOpen] = useState(false)
   const [isProfileLoading, setIsProfileLoading] = useState(true)
@@ -466,7 +481,7 @@ export default function HiringAgencyDashboard() {
       setCompanyId(company?.id ?? null)
       setCompanyForm(mappedForm)
       setAgency({
-        ...fallbackAgency,
+        ...loadingAgency,
         name: mappedForm.name,
         logo: mappedForm.logo_url || fallbackAgency.logo,
         location: mappedForm.location || fallbackAgency.location,
@@ -867,6 +882,13 @@ export default function HiringAgencyDashboard() {
       .join("")
       .slice(0, 2)
       .toUpperCase() || "PR"
+  const displayAgencyName = isProfileLoading ? "Loading company..." : agency.name || "Your company"
+  const displayAgencyDescription = isProfileLoading
+    ? "Fetching your company profile."
+    : agency.description || "Add your company description to introduce your brand to candidates."
+  const displayAgencyLocation = isProfileLoading ? "Loading..." : agency.location || "Location not set"
+  const displayAgencyEmployees = isProfileLoading ? "Loading..." : agency.employees || "Team size not set"
+  const displayAgencyFounded = isProfileLoading ? "Loading..." : agency.founded || "N/A"
 
   return (
     <div className="min-h-screen bg-background">
@@ -928,23 +950,23 @@ export default function HiringAgencyDashboard() {
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{agency.name}</h2>
-                        <p className="mt-1 text-sm leading-6 text-muted-foreground">{agency.description}</p>
+                        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{displayAgencyName}</h2>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">{displayAgencyDescription}</p>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1.5">
                         <MapPin className="h-3.5 w-3.5 text-primary" />
-                        {isProfileLoading ? "Loading..." : agency.location}
+                        {displayAgencyLocation}
                       </span>
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1.5">
                         <Users className="h-3.5 w-3.5 text-primary" />
-                        {agency.employees}
+                        {displayAgencyEmployees}
                       </span>
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1.5">
                         <Calendar className="h-3.5 w-3.5 text-primary" />
-                        Founded {agency.founded}
+                        Founded {displayAgencyFounded}
                       </span>
                     </div>
 

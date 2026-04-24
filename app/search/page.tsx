@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
+import { supabase } from "@/lib/supabase/client"
 import {
   Search,
   MapPin,
@@ -23,13 +24,117 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 
+type SearchInsights = {
+  topSkills?: string[]
+  totalMatches?: number
+  topLocations?: string[]
+  averageMatchScore?: number
+  salaryRange?: {
+    min?: number | null
+    max?: number | null
+  }
+  recommendations?: string[]
+}
+
+type JobSearchResult = {
+  jobId: string
+  jobTitle: string
+  company: string
+  location: string
+  salary: string
+  matchScore: number
+  matchReasons: string[]
+  requirements: string[]
+  benefits: string[]
+}
+
+type CandidateMatch = {
+  candidateId: string
+  name: string
+  title: string
+  location: string
+  experience: string
+  matchScore: number
+  matchReasons: string[]
+  skills: string[]
+  strengths: string[]
+  interviewQuestions: string[]
+}
+
+type JobRow = {
+  id: string
+  company_id: string
+  title: string
+  location: string | null
+  job_type: string | null
+  experience_level: string | null
+  salary_min: number | null
+  salary_max: number | null
+  requirements: string | null
+  benefits: string | null
+  status: "active" | "draft" | "closed"
+}
+
+type CompanyRow = {
+  id: string
+  name: string
+}
+
+const formatCurrencyRange = (min?: number | null, max?: number | null) => {
+  const format = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+      notation: value >= 1000 ? "compact" : "standard",
+    }).format(value)
+
+  if (min && max) return `${format(min)} - ${format(max)}`
+  if (min) return `From ${format(min)}`
+  if (max) return `Up to ${format(max)}`
+  return "Salary not specified"
+}
+
+const splitList = (value?: string | null) =>
+  value
+    ?.split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean) ?? []
+
+const formatLabel = (value?: string | null) =>
+  value
+    ? value
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ")
+    : ""
+
+const formatCompensation = (value?: number | null) => (value == null ? "Not specified" : `$${value.toLocaleString()}`)
+
+const calculateMatchScore = (job: JobRow, searchQuery: string, preferredLocation: string) => {
+  let score = 70
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const title = job.title.toLowerCase()
+  const location = job.location?.toLowerCase() ?? ""
+  const experienceLevel = job.experience_level?.toLowerCase() ?? ""
+
+  if (!normalizedQuery) score += 10
+  if (normalizedQuery && title.includes(normalizedQuery)) score += 15
+  if (preferredLocation && location.includes(preferredLocation.toLowerCase())) score += 10
+  if (experienceLevel.includes("senior")) score += 5
+
+  return Math.min(score, 98)
+}
+
 export default function SearchPage() {
+  const jobSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("jobs")
   const [showFilters, setShowFilters] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [aiInsights, setAiInsights] = useState(null)
-  const [matchedResults, setMatchedResults] = useState([])
+  const [aiInsights, setAiInsights] = useState<SearchInsights | null>(null)
+  const [matchedResults, setMatchedResults] = useState<JobSearchResult[] | CandidateMatch[]>([])
+  const [jobsError, setJobsError] = useState("")
   const [filters, setFilters] = useState({
     location: "",
     specialty: "",
@@ -53,27 +158,150 @@ export default function SearchPage() {
     },
   }
 
-  // AI-powered job matching
-  const performAIJobMatch = async () => {
+  const loadPostedJobs = async () => {
     setIsLoading(true)
+    setJobsError("")
+
     try {
-      const response = await fetch("/api/ai/match-jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userProfile,
-          preferences: userProfile.preferences,
-          location: userProfile.location,
-        }),
+      const { data: jobsData, error: jobsError } = await supabase
+        .from("jobs")
+        .select("id, company_id, title, location, job_type, experience_level, salary_min, salary_max, requirements, benefits, status")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+
+      if (jobsError) {
+        throw jobsError
+      }
+
+      const jobs = (jobsData as JobRow[] | null) ?? []
+      const companyIds = [...new Set(jobs.map((job) => job.company_id).filter(Boolean))]
+
+      const companyMap = new Map<string, string>()
+      if (companyIds.length > 0) {
+        const { data: companiesData, error: companiesError } = await supabase
+          .from("companies")
+          .select("id, name")
+          .in("id", companyIds)
+
+        if (companiesError) {
+          throw companiesError
+        }
+
+        ;((companiesData as CompanyRow[] | null) ?? []).forEach((company) => {
+          companyMap.set(company.id, company.name)
+        })
+      }
+
+      const normalizedQuery = searchQuery.trim().toLowerCase()
+      const selectedLocation = filters.location.trim().toLowerCase()
+      const selectedJobType = filters.specialty.trim().toLowerCase()
+      const minimumMatchScore = filters.rating[0] * 20
+
+      const filteredJobs = jobs.filter((job) => {
+        const title = job.title.toLowerCase()
+        const companyName = (companyMap.get(job.company_id) ?? "Hiring Company").toLowerCase()
+        const location = job.location?.toLowerCase() ?? ""
+        const jobType = job.job_type?.toLowerCase() ?? ""
+        const maxSalary = job.salary_max ?? job.salary_min ?? 0
+        const minSalary = job.salary_min ?? job.salary_max ?? 0
+        const matchScore = calculateMatchScore(job, searchQuery, userProfile.location)
+
+        const matchesQuery =
+          !normalizedQuery ||
+          title.includes(normalizedQuery) ||
+          companyName.includes(normalizedQuery) ||
+          location.includes(normalizedQuery)
+        const matchesLocation = !selectedLocation || location.includes(selectedLocation)
+        const matchesJobType = !selectedJobType || jobType === selectedJobType
+        const matchesSalaryFloor = maxSalary === 0 || maxSalary >= filters.salary[0]
+        const matchesSalaryCeiling = minSalary === 0 || minSalary <= filters.salary[1]
+        const matchesRating = matchScore >= minimumMatchScore
+
+        return matchesQuery && matchesLocation && matchesJobType && matchesSalaryFloor && matchesSalaryCeiling && matchesRating
       })
-      const data = await response.json()
-      setMatchedResults(data.matches || [])
-      setAiInsights(data.searchInsights)
+
+      const jobResults: JobSearchResult[] = filteredJobs.map((job) => {
+        const requirements = splitList(job.requirements)
+        const benefits = splitList(job.benefits)
+        const companyName = companyMap.get(job.company_id) ?? "Hiring Company"
+        const matchScore = calculateMatchScore(job, searchQuery, userProfile.location)
+        const matchReasons = [
+          companyName ? `Posted by ${companyName}` : "Live opening from the platform",
+          job.location ? `Location: ${job.location}` : "Remote or location flexible",
+          job.job_type ? `${formatLabel(job.job_type)} opportunity` : "Open role",
+        ]
+
+        if (job.experience_level) {
+          matchReasons.push(`${formatLabel(job.experience_level)} experience level`)
+        }
+
+        return {
+          jobId: job.id,
+          jobTitle: job.title,
+          company: companyName,
+          location: job.location || "Location not specified",
+          salary: formatCurrencyRange(job.salary_min, job.salary_max),
+          matchScore,
+          matchReasons: matchReasons.slice(0, 3),
+          requirements,
+          benefits,
+        }
+      })
+
+      const skillCounts = new Map<string, number>()
+      filteredJobs.flatMap((job) => splitList(job.requirements)).forEach((skill) => {
+        skillCounts.set(skill, (skillCounts.get(skill) ?? 0) + 1)
+      })
+
+      const locationCounts = new Map<string, number>()
+      filteredJobs.forEach((job) => {
+        if (!job.location) return
+        locationCounts.set(job.location, (locationCounts.get(job.location) ?? 0) + 1)
+      })
+
+      const topSkills = [...skillCounts.entries()]
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 3)
+        .map(([skill]) => skill)
+
+      const topLocations = [...locationCounts.entries()]
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 3)
+        .map(([location]) => location)
+
+      const averageMatchScore =
+        jobResults.length > 0
+          ? Math.round(jobResults.reduce((total, job) => total + job.matchScore, 0) / jobResults.length)
+          : 0
+
+      setMatchedResults(jobResults)
+      setAiInsights({
+        topSkills,
+        totalMatches: jobResults.length,
+        topLocations,
+        averageMatchScore,
+        salaryRange: {
+          min: filteredJobs.reduce<number | null>((lowest, job) => {
+            if (job.salary_min == null) return lowest
+            return lowest == null ? job.salary_min : Math.min(lowest, job.salary_min)
+          }, null),
+          max: filteredJobs.reduce<number | null>((highest, job) => {
+            if (job.salary_max == null) return highest
+            return highest == null ? job.salary_max : Math.max(highest, job.salary_max)
+          }, null),
+        },
+        recommendations:
+          jobResults.length > 0
+            ? [`${jobResults.length} live jobs match your current search filters.`]
+            : ["No live jobs matched yet. Try broadening your filters or posting more openings."],
+      })
     } catch (error) {
-      console.error("AI matching failed:", error)
-      // Fallback to mock data
-      setMatchedResults(mockJobs)
+      console.error("Loading posted jobs failed:", error)
+      setJobsError("We couldn't load live jobs right now.")
+      setMatchedResults([])
+      setAiInsights(null)
     }
+
     setIsLoading(false)
   }
 
@@ -100,7 +328,7 @@ export default function SearchPage() {
         }),
       })
       const data = await response.json()
-      setMatchedResults(data.matches || [])
+      setMatchedResults((data.matches || []) as CandidateMatch[])
       setAiInsights(data.hiringInsights)
     } catch (error) {
       console.error("AI matching failed:", error)
@@ -131,18 +359,36 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (activeTab === "jobs") {
-      performAIJobMatch()
+      loadPostedJobs()
     } else {
       performAICandidateMatch()
     }
-    getSearchInsights()
   }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab !== "jobs") return
+
+    if (jobSearchTimeoutRef.current) {
+      clearTimeout(jobSearchTimeoutRef.current)
+    }
+
+    jobSearchTimeoutRef.current = setTimeout(() => {
+      loadPostedJobs()
+    }, 250)
+
+    return () => {
+      if (jobSearchTimeoutRef.current) {
+        clearTimeout(jobSearchTimeoutRef.current)
+      }
+    }
+  }, [activeTab, searchQuery, filters])
 
   const handleSearch = () => {
     if (activeTab === "jobs") {
-      performAIJobMatch()
+      loadPostedJobs()
     } else {
       performAICandidateMatch()
+      getSearchInsights()
     }
   }
 
@@ -239,6 +485,11 @@ export default function SearchPage() {
                   placeholder={`Search ${activeTab}...`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleSearch()
+                    }
+                  }}
                   className="pl-10 h-12 text-lg"
                 />
               </div>
@@ -379,7 +630,16 @@ export default function SearchPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  {activeTab === "jobs" && (
+                    <div>
+                      <h4 className="font-medium mb-2">Live Matches</h4>
+                      <div className="text-2xl font-semibold text-foreground">{aiInsights.totalMatches ?? 0}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Avg. match score {aiInsights.averageMatchScore ?? 0}%
+                      </div>
+                    </div>
+                  )}
                   {activeTab === "jobs" && aiInsights.topSkills && (
                     <div>
                       <h4 className="font-medium mb-2">In-Demand Skills</h4>
@@ -392,12 +652,23 @@ export default function SearchPage() {
                       </div>
                     </div>
                   )}
+                  {activeTab === "jobs" && aiInsights.topLocations && aiInsights.topLocations.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Top Locations</h4>
+                      <div className="space-y-1">
+                        {aiInsights.topLocations.map((location, index) => (
+                          <div key={index} className="text-sm text-muted-foreground">
+                            {location}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {aiInsights.salaryRange && (
                     <div>
                       <h4 className="font-medium mb-2">Salary Range</h4>
                       <div className="text-sm text-muted-foreground">
-                        ${aiInsights.salaryRange.min?.toLocaleString()} - $
-                        {aiInsights.salaryRange.max?.toLocaleString()}
+                        {formatCompensation(aiInsights.salaryRange.min)} - {formatCompensation(aiInsights.salaryRange.max)}
                       </div>
                     </div>
                   )}
@@ -417,10 +688,20 @@ export default function SearchPage() {
               {isLoading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">AI is finding your perfect matches...</p>
+                  <p className="text-muted-foreground">Loading live job postings...</p>
                 </div>
+              ) : jobsError ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">{jobsError}</CardContent>
+                </Card>
+              ) : (matchedResults as JobSearchResult[]).length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    No posted jobs match your current search yet.
+                  </CardContent>
+                </Card>
               ) : (
-                matchedResults.map((job, index) => (
+                (matchedResults as JobSearchResult[]).map((job, index) => (
                   <Card key={job.jobId || index} className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
@@ -502,7 +783,7 @@ export default function SearchPage() {
                   <p className="text-muted-foreground">AI is finding the best candidates...</p>
                 </div>
               ) : (
-                matchedResults.map((candidate, index) => (
+                (matchedResults as CandidateMatch[]).map((candidate, index) => (
                   <Card key={candidate.candidateId || index} className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
