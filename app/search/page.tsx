@@ -110,6 +110,7 @@ const formatLabel = (value?: string | null) =>
     : ""
 
 const formatCompensation = (value?: number | null) => (value == null ? "Not specified" : `$${value.toLocaleString()}`)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
 const calculateMatchScore = (job: JobRow, searchQuery: string, preferredLocation: string) => {
   let score = 70
@@ -309,7 +310,7 @@ export default function SearchPage() {
   const performAICandidateMatch = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/ai/match-candidates", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/match-candidates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -341,7 +342,7 @@ export default function SearchPage() {
   // Get AI search insights
   const getSearchInsights = async () => {
     try {
-      const response = await fetch("/api/ai/search-insights", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/search-insights`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
