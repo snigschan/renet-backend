@@ -187,6 +187,119 @@ export default function HomePage() {
     ],
   }
 
+  const roleJourneys = {
+    "job-seeker": {
+      eyebrow: "Career Launchpad",
+      title: "Everything a job seeker needs to move from search to shortlist",
+      subtitle: "Focused actions, smarter preparation, and a cleaner path to the next offer.",
+      stats: [
+        { value: "2.5K+", label: "open roles" },
+        { value: "AI", label: "resume help" },
+        { value: "24/7", label: "prep support" },
+      ],
+      sections: [
+        {
+          title: "Apply With Confidence",
+          icon: UserSearch,
+          accent: "teal",
+          pages: [
+            { title: "Browse Jobs", description: "Search active roles by market, company, and specialty", icon: Target, href: "/search" },
+            platformPages.jobSeekers[0],
+            platformPages.jobSeekers[1],
+          ],
+        },
+        {
+          title: "Build Your Advantage",
+          icon: GraduationCap,
+          accent: "gold",
+          pages: [
+            platformPages.jobSeekers[2],
+            platformPages.jobSeekers[3],
+            platformPages.jobSeekers[4],
+          ],
+        },
+      ],
+    },
+    employer: {
+      eyebrow: "Hiring Workspace",
+      title: "A sharper employer flow for sourcing, screening, and hiring",
+      subtitle: "The right tools for building teams without jumping between disconnected pages.",
+      stats: [
+        { value: "15K+", label: "verified profiles" },
+        { value: "ATS", label: "pipeline ready" },
+        { value: "Live", label: "interview flow" },
+      ],
+      sections: [
+        {
+          title: "Core Hiring Actions",
+          icon: Briefcase,
+          accent: "gold",
+          pages: [...platformPages.employers],
+        },
+        {
+          title: "Recruitment Operations",
+          icon: Wrench,
+          accent: "teal",
+          pages: [
+            { title: "ATS Dashboard", description: "Track every candidate from application to offer", icon: Target, href: "/ats" },
+            { title: "Interview Hub", description: "Run live and async interviews from one place", icon: Video, href: "/interviews" },
+            { title: "Assessments", description: "Validate skill fit before final decisions", icon: FileText, href: "/assessments" },
+          ],
+        },
+      ],
+    },
+    broker: {
+      eyebrow: "Brokerage Flow",
+      title: "A broker view built for matching jobs, talent, and client demand",
+      subtitle: "Balanced tools for pipeline management, sourcing, and placement activity.",
+      stats: [
+        { value: "Dual", label: "jobs + talent" },
+        { value: "Fast", label: "client follow-up" },
+        { value: "360", label: "placement flow" },
+      ],
+      sections: [
+        {
+          title: "Broker Actions",
+          icon: Building2,
+          accent: "teal",
+          pages: [
+            { title: "Browse Jobs", description: "See active briefs and open hiring demand", icon: Target, href: "/search" },
+            { title: "Candidate Search", description: "Source verified professionals for live mandates", icon: UserPlus, href: "/hire-talents" },
+            { title: "Agency Dashboard", description: "Manage clients, roles, and placements", icon: Briefcase, href: "/dashboard/hiring-agency" },
+          ],
+        },
+        {
+          title: "Brokerage Growth",
+          icon: TrendingUp,
+          accent: "gold",
+          pages: [
+            { title: "Directory", description: "Discover employers, developers, and talent pools", icon: MapPin, href: "/directory" },
+            { title: "Market News", description: "Stay ahead of regional demand shifts", icon: Newspaper, href: "/news" },
+            { title: "Tools Hub", description: "Use templates and calculators for faster execution", icon: Wrench, href: "/tools" },
+          ],
+        },
+      ],
+    },
+  } as const
+
+  const activeJourney = selectedRole ? roleJourneys[selectedRole] : null
+  const accentClasses = {
+    teal: {
+      icon: "text-[#008080]",
+      bg: "bg-[#008080]/10",
+      hover: "group-hover:text-[#008080]",
+      border: "border-[#008080]/20",
+      pill: "bg-[#008080]/10 text-[#008080]",
+    },
+    gold: {
+      icon: "text-[#D4AF37]",
+      bg: "bg-[#D4AF37]/10",
+      hover: "group-hover:text-[#D4AF37]",
+      border: "border-[#D4AF37]/20",
+      pill: "bg-[#D4AF37]/10 text-[#9A7400]",
+    },
+  } as const
+
   if (showRoleSelection) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#2C3E50] via-[#34495E] to-[#2C3E50] flex items-center justify-center p-4">
@@ -674,26 +787,30 @@ export default function HomePage() {
             className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up"
             style={{ animationDelay: "0.4s" }}
           >
-            <Link href="/auth/register">
-              <Button
-                size="lg"
-                className="bg-[#008080] hover:bg-[#006666] text-white px-8 py-6 text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
-              >
-                {currentContent.hero.cta}
-                <ArrowRight
-                  className={`w-5 h-5 ${isRTL ? "mr-2 rotate-180" : "ml-2"} group-hover:translate-x-1 transition-transform`}
-                />
-              </Button>
-            </Link>
-            <Link href="/hire-talents">
-              <Button
-                variant="outline"
-                size="lg"
-                className="px-8 py-6 text-lg border-2 border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent hover:scale-105 hover:shadow-lg transition-all duration-300"
-              >
-                Hire Talents
-              </Button>
-            </Link>
+            {selectedRole !== "job-seeker" && (
+              <>
+                <Link href="/auth/register">
+                  <Button
+                    size="lg"
+                    className="bg-[#008080] hover:bg-[#006666] text-white px-8 py-6 text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
+                  >
+                    {currentContent.hero.cta}
+                    <ArrowRight
+                      className={`w-5 h-5 ${isRTL ? "mr-2 rotate-180" : "ml-2"} group-hover:translate-x-1 transition-transform`}
+                    />
+                  </Button>
+                </Link>
+                <Link href="/hire-talents">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="px-8 py-6 text-lg border-2 border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent hover:scale-105 hover:shadow-lg transition-all duration-300"
+                  >
+                    Hire Talents
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="mt-16 grid grid-cols-3 gap-4 max-w-3xl mx-auto">
@@ -824,152 +941,93 @@ export default function HomePage() {
       {/* Explore Renet Platform Section */}
       <section className="py-20 px-4 bg-white">
         <div className="container mx-auto">
-          <div className="text-center mb-16 animate-fade-in-up">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 text-balance">Explore Renet Platform</h2>
-            <p className="text-xl text-gray-600 text-balance max-w-2xl mx-auto">
-              Comprehensive tools and resources for real estate professionals across the Middle East
-            </p>
-          </div>
-
-          {/* For Job Seekers */}
-          <div className="mb-16">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3 animate-fade-in-left">
-              <Users className="w-7 h-7 text-[#008080]" />
-              For Job Seekers
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-              {platformPages.jobSeekers.map((page, index) => {
-                const Icon = page.icon
-                return (
-                  <Link key={index} href={page.href}>
-                    <Card
-                      className="border-gray-200 bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.1}s` }}
+          {activeJourney ? (
+            <>
+              <div className="mx-auto mb-14 max-w-5xl text-center animate-fade-in-up">
+                <Badge className="mb-5 border-[#2C3E50]/10 bg-[#2C3E50]/5 px-4 py-2 text-[#2C3E50]">
+                  {activeJourney.eyebrow}
+                </Badge>
+                <h2 className="mb-4 text-4xl font-bold text-gray-900 text-balance">{activeJourney.title}</h2>
+                <p className="mx-auto max-w-3xl text-xl text-gray-600 text-balance">{activeJourney.subtitle}</p>
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                  {activeJourney.stats.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-full border border-gray-200 bg-white px-5 py-3 text-sm shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                     >
-                      <CardHeader className="pb-3">
-                        <div className="w-12 h-12 bg-[#008080]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                          <Icon className="w-6 h-6 text-[#008080]" />
+                      <span className="font-semibold text-gray-900">{stat.value}</span>
+                      <span className="ml-2 text-gray-500">{stat.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {activeJourney.sections.map((section, sectionIndex) => {
+                const SectionIcon = section.icon
+                const accent = accentClasses[section.accent]
+
+                return (
+                  <div key={section.title} className="mb-16">
+                    <div className="mb-6 flex items-center justify-between gap-4 animate-fade-in-left">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${accent.bg}`}>
+                          <SectionIcon className={`h-6 w-6 ${accent.icon}`} />
                         </div>
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-[#008080] transition-colors">
-                          {page.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-sm leading-relaxed text-gray-600">
-                          {page.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-900">{section.title}</h3>
+                          <p className="text-sm text-gray-500">Focused actions for your role</p>
+                        </div>
+                      </div>
+                      <div className={`hidden rounded-full px-3 py-1 text-xs font-medium md:block ${accent.pill}`}>
+                        {section.pages.length} actions
+                      </div>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                      {section.pages.map((page, index) => {
+                        const Icon = page.icon
+                        return (
+                          <Link key={page.title} href={page.href}>
+                            <Card
+                              className={`group h-full cursor-pointer border bg-white/95 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${accent.border}`}
+                              style={{ animationDelay: `${sectionIndex * 0.12 + index * 0.08}s` }}
+                            >
+                              <CardHeader className="pb-4">
+                                <div
+                                  className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${accent.bg} transition-all duration-300 group-hover:scale-110 group-hover:rotate-6`}
+                                >
+                                  <Icon className={`h-7 w-7 ${accent.icon}`} />
+                                </div>
+                                <CardTitle className={`text-xl text-gray-900 transition-colors ${accent.hover}`}>
+                                  {page.title}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <CardDescription className="text-sm leading-7 text-gray-600">
+                                  {page.description}
+                                </CardDescription>
+                                <div className="mt-6 flex items-center text-sm font-medium text-gray-900">
+                                  Open
+                                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )
               })}
+            </>
+          ) : (
+            <div className="text-center mb-16 animate-fade-in-up">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 text-balance">Explore Renet Platform</h2>
+              <p className="text-xl text-gray-600 text-balance max-w-2xl mx-auto">
+                Comprehensive tools and resources for real estate professionals across the Middle East
+              </p>
             </div>
-          </div>
-
-          {/* For Employers */}
-          <div className="mb-16">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3 animate-fade-in-left">
-              <Briefcase className="w-7 h-7 text-[#D4AF37]" />
-              For Employers & Agencies
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {platformPages.employers.map((page, index) => {
-                const Icon = page.icon
-                return (
-                  <Link key={index} href={page.href}>
-                    <Card
-                      className="border-gray-200 bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                          <Icon className="w-6 h-6 text-[#D4AF37]" />
-                        </div>
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-[#D4AF37] transition-colors">
-                          {page.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-sm leading-relaxed text-gray-600">
-                          {page.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Marketplace & Tools */}
-          <div className="mb-16">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3 animate-fade-in-left">
-              <Building2 className="w-7 h-7 text-[#008080]" />
-              Marketplace & Tools
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {platformPages.marketplace.map((page, index) => {
-                const Icon = page.icon
-                return (
-                  <Link key={index} href={page.href}>
-                    <Card
-                      className="border-gray-200 bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="w-12 h-12 bg-[#008080]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                          <Icon className="w-6 h-6 text-[#008080]" />
-                        </div>
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-[#008080] transition-colors">
-                          {page.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-sm leading-relaxed text-gray-600">
-                          {page.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Community & Learning */}
-          <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3 animate-fade-in-left">
-              <GraduationCap className="w-7 h-7 text-[#D4AF37]" />
-              Community & Learning
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {platformPages.community.map((page, index) => {
-                const Icon = page.icon
-                return (
-                  <Link key={index} href={page.href}>
-                    <Card
-                      className="border-gray-200 bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                          <Icon className="w-6 h-6 text-[#D4AF37]" />
-                        </div>
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-[#D4AF37] transition-colors">
-                          {page.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-sm leading-relaxed text-gray-600">
-                          {page.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
