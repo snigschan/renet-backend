@@ -23,6 +23,7 @@ import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 type SearchInsights = {
   topSkills?: string[]
@@ -132,6 +133,8 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("jobs")
   const [showFilters, setShowFilters] = useState(false)
+  const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<JobSearchResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [aiInsights, setAiInsights] = useState<SearchInsights | null>(null)
   const [matchedResults, setMatchedResults] = useState<JobSearchResult[] | CandidateMatch[]>([])
@@ -765,7 +768,14 @@ export default function SearchPage() {
                             Save Job
                           </Button>
                         </div>
-                        <Button size="sm" className="bg-primary hover:bg-primary/90">
+                        <Button
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90"
+                          onClick={() => {
+                            setSelectedJob(job)
+                            setIsApplyDialogOpen(true)
+                          }}
+                        >
                           Apply Now
                         </Button>
                       </div>
@@ -864,6 +874,107 @@ export default function SearchPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Apply for {selectedJob?.jobTitle ?? "this job"}</DialogTitle>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={async (event) => {
+              event.preventDefault()
+              const form = new FormData(event.currentTarget)
+
+              await fetch("/api/application", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  jobId: selectedJob?.jobId ?? null,
+                  jobTitle: selectedJob?.jobTitle ?? "",
+                  company: selectedJob?.company ?? "",
+                  personalInfo: {
+                    firstName: form.get("firstName"),
+                    lastName: form.get("lastName"),
+                    email: form.get("email"),
+                    phone: form.get("phone"),
+                    currentLocation: form.get("currentLocation"),
+                  },
+                  professionalInfo: {
+                    currentTitle: form.get("currentTitle"),
+                    yearsOfExperience: form.get("yearsOfExperience"),
+                    expectedSalary: form.get("expectedSalary"),
+                    noticePeriod: form.get("noticePeriod"),
+                    workAuthorization: form.get("workAuthorization"),
+                  },
+                  profileLinks: {
+                    linkedinUrl: form.get("linkedinUrl"),
+                    portfolioUrl: form.get("portfolioUrl"),
+                  },
+                  application: {
+                    coverLetter: form.get("coverLetter"),
+                    keySkills: form.get("keySkills"),
+                    resumeText: form.get("resumeText"),
+                    canRelocate: form.get("canRelocate"),
+                  },
+                }),
+              })
+
+              setIsApplyDialogOpen(false)
+            }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input name="firstName" placeholder="First name" required />
+              <Input name="lastName" placeholder="Last name" required />
+              <Input name="email" type="email" placeholder="Email address" required />
+              <Input name="phone" placeholder="Phone number" required />
+              <Input name="currentLocation" placeholder="Current location (City, Country)" required />
+              <Input name="currentTitle" placeholder="Current job title" required />
+              <Input name="yearsOfExperience" type="number" min="0" placeholder="Years of experience" required />
+              <Input name="expectedSalary" placeholder="Expected salary (e.g. 120000 USD/year)" />
+              <Input name="noticePeriod" placeholder="Notice period (e.g. 30 days)" />
+              <Input name="workAuthorization" placeholder="Work authorization / visa status" />
+              <Input name="linkedinUrl" type="url" placeholder="LinkedIn profile URL" />
+              <Input name="portfolioUrl" type="url" placeholder="Portfolio / website URL" />
+            </div>
+
+            <Input name="keySkills" placeholder="Key skills (comma separated)" required />
+
+            <textarea
+              name="coverLetter"
+              placeholder="Cover letter"
+              className="w-full min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              required
+            />
+
+            <textarea
+              name="resumeText"
+              placeholder="Resume summary (or paste key resume content)"
+              className="w-full min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              required
+            />
+
+            <Select name="canRelocate" defaultValue="no">
+              <SelectTrigger>
+                <SelectValue placeholder="Willing to relocate?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes, willing to relocate</SelectItem>
+                <SelectItem value="no">No, not willing to relocate</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2 pt-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setIsApplyDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1">
+                Submit Application
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
