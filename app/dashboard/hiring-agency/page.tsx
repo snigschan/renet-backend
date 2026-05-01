@@ -140,24 +140,43 @@ type CandidateProfileRow = {
 
 type JobApplicationRow = {
   id: string
-  job_id: string
-  candidate_id: string
+  job_id: string | null
+  candidate_id: string | null
   status: "new" | "under_review" | "interview_scheduled" | "hired" | "rejected"
   match_score: number | null
   created_at: string
   jobs: Pick<JobRow, "title"> | null
   candidate: CandidateProfileRow | null
+  email?: string | null
+  phone?: string | null
+  current_location?: string | null
+  current_title?: string | null
+  years_of_experience?: number | null
+  key_skills?: string | null
+  cover_letter?: string | null
+  expected_salary?: string | null
+  notice_period?: string | null
+  work_authorization?: string | null
 }
 
-type JobApplicationQueryRow = {
+type SavedApplicationRow = {
   id: string
-  job_id: string
-  candidate_id: string
-  status: JobApplicationRow["status"]
-  match_score: number | null
+  job_id: string | null
+  job_title: string | null
+  company: string | null
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  current_location: string
+  current_title: string
+  years_of_experience: number
+  expected_salary: string | null
+  notice_period: string | null
+  work_authorization: string | null
+  key_skills: string
+  cover_letter: string
   created_at: string
-  jobs: Array<Pick<JobRow, "title">> | Pick<JobRow, "title"> | null
-  candidate: CandidateProfileRow[] | CandidateProfileRow | null
 }
 
 type JobPostFormValues = {
@@ -331,9 +350,9 @@ export default function HiringAgencyDashboard() {
     }
 
     const { data: applicationsData, error: applicationsError } = await supabase
-      .from("job_applications")
+      .from("applications")
       .select(
-        "id, job_id, candidate_id, status, match_score, created_at, jobs!inner(title), candidate:profiles!job_applications_candidate_id_fkey(full_name, role, avatar_url)",
+        "id, job_id, job_title, company, first_name, last_name, email, phone, current_location, current_title, years_of_experience, expected_salary, notice_period, work_authorization, key_skills, cover_letter, created_at",
       )
       .in("job_id", jobIds)
       .order("created_at", { ascending: false })
@@ -355,12 +374,30 @@ export default function HiringAgencyDashboard() {
       return
     }
 
-    const nextApplications =
-      ((applicationsData as JobApplicationQueryRow[] | null) ?? []).map((application) => ({
-        ...application,
-        jobs: Array.isArray(application.jobs) ? application.jobs[0] ?? null : application.jobs,
-        candidate: Array.isArray(application.candidate) ? application.candidate[0] ?? null : application.candidate,
-      })) as JobApplicationRow[]
+    const nextApplications = ((applicationsData as SavedApplicationRow[] | null) ?? []).map((application) => ({
+      id: application.id,
+      job_id: application.job_id,
+      candidate_id: null,
+      status: "new" as const,
+      match_score: null,
+      created_at: application.created_at,
+      jobs: { title: application.job_title || "Untitled job" },
+      candidate: {
+        full_name: `${application.first_name} ${application.last_name}`.trim() || "Candidate",
+        role: application.current_title || "Candidate",
+        avatar_url: null,
+      },
+      email: application.email,
+      phone: application.phone,
+      current_location: application.current_location,
+      current_title: application.current_title,
+      years_of_experience: application.years_of_experience,
+      key_skills: application.key_skills,
+      cover_letter: application.cover_letter,
+      expected_salary: application.expected_salary,
+      notice_period: application.notice_period,
+      work_authorization: application.work_authorization,
+    }))
     setApplications(nextApplications)
     setAgency((current) => ({
       ...current,
@@ -850,6 +887,7 @@ export default function HiringAgencyDashboard() {
 
   const jobsWithCounts = useMemo(() => {
     const counts = applications.reduce<Record<string, number>>((accumulator, application) => {
+      if (!application.job_id) return accumulator
       accumulator[application.job_id] = (accumulator[application.job_id] ?? 0) + 1
       return accumulator
     }, {})
@@ -869,7 +907,15 @@ export default function HiringAgencyDashboard() {
       const candidateName = application.candidate?.full_name?.toLowerCase() ?? ""
       const role = formatRoleLabel(application.candidate?.role).toLowerCase()
       const jobTitle = application.jobs?.title?.toLowerCase() ?? ""
-      return candidateName.includes(query) || role.includes(query) || jobTitle.includes(query)
+      const email = application.email?.toLowerCase() ?? ""
+      const skills = application.key_skills?.toLowerCase() ?? ""
+      return (
+        candidateName.includes(query) ||
+        role.includes(query) ||
+        jobTitle.includes(query) ||
+        email.includes(query) ||
+        skills.includes(query)
+      )
     })
   }, [applications, candidateSearch])
 
@@ -1388,6 +1434,20 @@ export default function HiringAgencyDashboard() {
                                   <p className="text-sm text-muted-foreground">
                                     Applied for: {application.jobs?.title || "Untitled job"}
                                   </p>
+                                  <p className="text-sm text-muted-foreground">Email: {application.email || "N/A"}</p>
+                                  <p className="text-sm text-muted-foreground">Phone: {application.phone || "N/A"}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Location: {application.current_location || "N/A"} | Experience:{" "}
+                                    {application.years_of_experience ?? 0} years
+                                  </p>
+                                  {application.key_skills && (
+                                    <p className="text-sm text-muted-foreground">Skills: {application.key_skills}</p>
+                                  )}
+                                  {application.cover_letter && (
+                                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                                      Cover Letter: {application.cover_letter}
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <Button variant="outline" size="sm">
