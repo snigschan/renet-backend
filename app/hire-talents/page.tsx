@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -41,7 +42,8 @@ export default function HireTalentsPage() {
   const [selectedLocation, setSelectedLocation] = useState("all")
   const [selectedExperience, setSelectedExperience] = useState("all")
   const [viewMode, setViewMode] = useState<"browse" | "ai-match">("browse")
-
+  const [applyOpen, setApplyOpen] = useState(false)
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null)
   // Mock featured candidates with ME focus
   const featuredCandidates = [
     {
@@ -454,15 +456,21 @@ export default function HireTalentsPage() {
                         <Button variant="outline" className="flex-1 bg-transparent">
                           View Profile
                         </Button>
-                        <Button className="flex-1 bg-gradient-to-r from-amber-500 to-teal-600 hover:from-amber-600 hover:to-teal-700">
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Contact
+
+                        <Button
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            setSelectedCandidateId(candidate.id)
+                            setApplyOpen(true)
+                          }}
+                        >
+                          Apply
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
-              </div>
+                </div>
 
               {filteredCandidates.length === 0 && (
                 <Card className="border-border/50">
@@ -542,6 +550,40 @@ export default function HireTalentsPage() {
           </Tabs>
         </div>
       </section>
+
+      <Dialog open={applyOpen} onOpenChange={setApplyOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Apply</DialogTitle>
+          </DialogHeader>
+          <form
+            className="space-y-3"
+            onSubmit={async (e) => {
+              e.preventDefault()
+
+              const form = new FormData(e.currentTarget)
+
+              await fetch("/api/application", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: form.get("name"),
+                  email: form.get("email"),
+                  candidateId: selectedCandidateId,
+                }),
+              })
+
+              setApplyOpen(false)
+            }}
+          >
+            <Input name="name" placeholder="Name" required />
+            <Input name="email" type="email" placeholder="Email" required />
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+              Submit
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-br from-amber-500 to-teal-600 text-white">

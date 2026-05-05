@@ -187,120 +187,300 @@ export default function HomePage() {
     ],
   }
 
+  const roleJourneys = {
+    "job-seeker": {
+      eyebrow: "Career Launchpad",
+      title: "Everything a job seeker needs to move from search to shortlist",
+      subtitle: "Focused actions, smarter preparation, and a cleaner path to the next offer.",
+      stats: [
+        { value: "2.5K+", label: "open roles" },
+        { value: "AI", label: "resume help" },
+        { value: "24/7", label: "prep support" },
+      ],
+      sections: [
+        {
+          title: "Apply With Confidence",
+          icon: UserSearch,
+          accent: "teal",
+          pages: [
+            { title: "Browse Jobs", description: "Search active roles by market, company, and specialty", icon: Target, href: "/search" },
+            platformPages.jobSeekers[0],
+            platformPages.jobSeekers[1],
+          ],
+        },
+        {
+          title: "Build Your Advantage",
+          icon: GraduationCap,
+          accent: "gold",
+          pages: [
+            platformPages.jobSeekers[2],
+            platformPages.jobSeekers[3],
+            platformPages.jobSeekers[4],
+          ],
+        },
+      ],
+    },
+    employer: {
+      eyebrow: "Hiring Workspace",
+      title: "A sharper employer flow for sourcing, screening, and hiring",
+      subtitle: "The right tools for building teams without jumping between disconnected pages.",
+      stats: [
+        { value: "15K+", label: "verified profiles" },
+        { value: "ATS", label: "pipeline ready" },
+        { value: "Live", label: "interview flow" },
+      ],
+      sections: [
+        {
+          title: "Core Hiring Actions",
+          icon: Briefcase,
+          accent: "gold",
+          pages: [...platformPages.employers],
+        },
+        {
+          title: "Recruitment Operations",
+          icon: Wrench,
+          accent: "teal",
+          pages: [
+            { title: "ATS Dashboard", description: "Track every candidate from application to offer", icon: Target, href: "/ats" },
+            { title: "Interview Hub", description: "Run live and async interviews from one place", icon: Video, href: "/interviews" },
+            { title: "Assessments", description: "Validate skill fit before final decisions", icon: FileText, href: "/assessments" },
+          ],
+        },
+      ],
+    },
+    broker: {
+      eyebrow: "Brokerage Flow",
+      title: "A broker view built for matching jobs, talent, and client demand",
+      subtitle: "Balanced tools for pipeline management, sourcing, and placement activity.",
+      stats: [
+        { value: "Dual", label: "jobs + talent" },
+        { value: "Fast", label: "client follow-up" },
+        { value: "360", label: "placement flow" },
+      ],
+      sections: [
+        {
+          title: "Broker Actions",
+          icon: Building2,
+          accent: "teal",
+          pages: [
+            { title: "Browse Jobs", description: "See active briefs and open hiring demand", icon: Target, href: "/search" },
+            { title: "Candidate Search", description: "Source verified professionals for live mandates", icon: UserPlus, href: "/hire-talents" },
+            { title: "Agency Dashboard", description: "Manage clients, roles, and placements", icon: Briefcase, href: "/dashboard/hiring-agency" },
+          ],
+        },
+        {
+          title: "Brokerage Growth",
+          icon: TrendingUp,
+          accent: "gold",
+          pages: [
+            { title: "Directory", description: "Discover employers, developers, and talent pools", icon: MapPin, href: "/directory" },
+            { title: "Market News", description: "Stay ahead of regional demand shifts", icon: Newspaper, href: "/news" },
+            { title: "Tools Hub", description: "Use templates and calculators for faster execution", icon: Wrench, href: "/tools" },
+          ],
+        },
+      ],
+    },
+  } as const
+
+  const activeJourney = selectedRole ? roleJourneys[selectedRole] : null
+  const accentClasses = {
+    teal: {
+      icon: "text-[#008080]",
+      bg: "bg-[#008080]/10",
+      hover: "group-hover:text-[#008080]",
+      border: "border-[#008080]/20",
+      pill: "bg-[#008080]/10 text-[#008080]",
+    },
+    gold: {
+      icon: "text-[#D4AF37]",
+      bg: "bg-[#D4AF37]/10",
+      hover: "group-hover:text-[#D4AF37]",
+      border: "border-[#D4AF37]/20",
+      pill: "bg-[#D4AF37]/10 text-[#9A7400]",
+    },
+  } as const
+
   if (showRoleSelection) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#2C3E50] via-[#34495E] to-[#2C3E50] flex items-center justify-center p-4">
-        <SplashScreen />
+      <div className="min-h-screen bg-[radial-gradient(circle_at_50%_20%,#102C56_0%,#0A2144_35%,#051736_60%,#010915_100%)] flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-[linear-gradient(130deg,rgba(255,255,255,0.12),transparent_28%,transparent_72%,rgba(255,255,255,0.04))]" />
+          <div className="absolute top-20 left-[14%] h-56 w-56 rounded-full bg-[#2F61B0]/28 blur-3xl" />
+          <div className="absolute right-[12%] top-20 h-64 w-64 rounded-full bg-[#1F4F9F]/30 blur-3xl" />
+          <div className="absolute bottom-10 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-[#0E3272]/30 blur-3xl" />
+        </div>
 
         <div className="max-w-6xl w-full animate-fade-in-up">
-          <div className="text-center mb-12">
-            <div className="flex justify-center mb-6">
+          <div className="mx-auto max-w-3xl text-center mb-12">
+            <div className="flex justify-center mb-5">
               <AnimatedLogo size="lg" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Welcome to Renet</h1>
-            <p className="text-xl text-gray-300">Select your role to get a personalized experience</p>
+            <div className="inline-flex items-center rounded-full border border-[#A5BDE6]/30 bg-[linear-gradient(180deg,rgba(62,96,151,0.58),rgba(40,68,114,0.46))] px-4 py-2 text-sm text-[#E4EEFF] backdrop-blur-sm shadow-[0_12px_30px_rgba(0,0,0,0.2)]">
+              Choose your workspace
+            </div>
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <div className="h-2.5 w-2.5 rounded-full bg-[#FF3D90] shadow-[0_0_14px_rgba(255,61,144,0.72)]" />
+              <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Welcome to Renet</h1>
+              <div className="h-2.5 w-2.5 rounded-full bg-[#FF3D90] shadow-[0_0_14px_rgba(255,61,144,0.72)]" />
+            </div>
+            <p className="mt-4 text-base md:text-lg text-[#C8D6F3]">
+              Select your role to unlock a more relevant experience from the first screen.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid gap-5 md:grid-cols-3">
             {/* Job Seeker */}
             <Card
-              className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 transition-all duration-500 cursor-pointer group hover:scale-105 hover:shadow-2xl"
+              className="relative overflow-hidden rounded-[22px] border border-[#8FA9D8]/30 bg-[linear-gradient(180deg,rgba(18,36,72,0.96)_0%,rgba(11,26,56,0.94)_50%,rgba(6,18,42,0.92)_100%)] backdrop-blur-xl transition-all duration-500 cursor-pointer group hover:-translate-y-2 hover:border-[#FF3D90]/75 hover:shadow-[0_22px_52px_rgba(0,0,0,0.45)]"
               onClick={() => handleRoleSelect("job-seeker")}
             >
-              <CardHeader className="text-center pb-4">
-                <div className="w-20 h-20 bg-[#E91E63]/20 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                  <UserSearch className="w-10 h-10 text-[#E91E63]" />
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF2F80] to-transparent opacity-100" />
+              <CardHeader className="text-center pb-3 pt-7 px-5">
+                <div className="mb-3 flex justify-center">
+                  <div className="rounded-full border border-[#8CA4D6]/20 bg-[#314D7D]/45 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[#D7E2FD]">
+                    Career
+                  </div>
                 </div>
-                <CardTitle className="text-2xl text-white">Job Seeker</CardTitle>
+                <div className="w-16 h-16 rounded-full border border-[#7D98CC]/28 bg-[radial-gradient(circle_at_top,rgba(76,112,176,0.32),rgba(28,52,95,0.62))] flex items-center justify-center mx-auto mb-4 transition-all duration-300 shadow-[0_0_35px_rgba(255,47,128,0.25)] group-hover:shadow-[0_0_50px_rgba(255,47,128,0.5)] group-hover:shadow-[0_0_38px_rgba(255,47,128,0.32)]">
+                  <UserSearch className="w-8 h-8 text-[#FF2F80]" />
+                </div>
+                <CardTitle className="text-[2rem] leading-none text-white">Job Seeker</CardTitle>
               </CardHeader>
-              <CardContent className="text-center">
-                <CardDescription className="text-gray-300 text-base leading-relaxed mb-4">
+              <CardContent className="text-center px-5 pb-5">
+                <CardDescription className="text-[#C9D6F1] text-sm leading-7 mb-5">
                   Find your dream job in real estate across the Middle East
                 </CardDescription>
-                <ul className="text-left text-gray-300 text-sm space-y-2">
+                <div className="mb-5 h-px bg-[#89A5DB]/20" />
+                <ul className="text-left text-[#D5E1FA] text-sm space-y-2.5">
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#FF2F80]/55">
+                      <Sparkles className="w-2.5 h-2.5 text-[#FF2F80] flex-shrink-0" />
+                    </div>
                     <span>AI-powered job matching</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#E91E63]/50">
+                      <Sparkles className="w-2.5 h-2.5 text-[#E91E63] flex-shrink-0" />
+                    </div>
                     <span>Resume builder & career tools</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#E91E63]/50">
+                      <Sparkles className="w-2.5 h-2.5 text-[#E91E63] flex-shrink-0" />
+                    </div>
                     <span>Interview preparation hub</span>
                   </li>
                 </ul>
+                <div className="mt-6 flex items-center justify-between rounded-2xl border border-[#7F9ACD]/25 bg-[linear-gradient(180deg,rgba(50,76,121,0.5),rgba(33,55,97,0.46))] px-4 py-3 text-sm text-[#E4EBFF]">
+                  <span>Explore job tools</span>
+                  <ArrowRight className="h-4 w-4 text-[#FF2F80] transition-transform duration-300 group-hover:translate-x-1" />
+                </div>
               </CardContent>
             </Card>
 
             {/* Employer/Developer */}
             <Card
-              className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 transition-all duration-500 cursor-pointer group hover:scale-105 hover:shadow-2xl"
+              className="relative overflow-hidden rounded-[22px] border border-[#8FA9D8]/30 bg-[linear-gradient(180deg,rgba(18,36,72,0.96)_0%,rgba(11,26,56,0.94)_50%,rgba(6,18,42,0.92)_100%)] backdrop-blur-xl transition-all duration-500 cursor-pointer group hover:-translate-y-2 hover:border-[#FF3D90]/75 hover:shadow-[0_22px_52px_rgba(0,0,0,0.45)]"
               onClick={() => handleRoleSelect("employer")}
             >
-              <CardHeader className="text-center pb-4">
-                <div className="w-20 h-20 bg-[#E91E63]/20 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                  <Code className="w-10 h-10 text-[#E91E63]" />
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF2F80] to-transparent opacity-80 group-hover:opacity-100 transition-all duration-500" />
+              <CardHeader className="text-center pb-3 pt-7 px-5">
+                <div className="mb-3 flex justify-center">
+                  <div className="rounded-full border border-[#8CA4D6]/20 bg-[#314D7D]/45 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[#D7E2FD]">
+                    Hiring
+                  </div>
                 </div>
-                <CardTitle className="text-2xl text-white">Employer / Developer</CardTitle>
+                <div className="w-16 h-16 rounded-full border border-[#7D98CC]/28 bg-[radial-gradient(circle_at_top,rgba(76,112,176,0.32),rgba(28,52,95,0.62))] flex items-center justify-center mx-auto mb-4 transition-all duration-300 shadow-[0_0_30px_rgba(30,89,187,0.28)] group-hover:shadow-[0_0_38px_rgba(255,47,128,0.32)]">
+                  <Code className="w-8 h-8 text-[#FF2F80]" />
+                </div>
+                <CardTitle className="text-[2rem] leading-none text-white">Employer / Developer</CardTitle>
               </CardHeader>
-              <CardContent className="text-center">
-                <CardDescription className="text-gray-300 text-base leading-relaxed mb-4">
+              <CardContent className="text-center px-5 pb-5">
+                <CardDescription className="text-[#C9D6F1] text-sm leading-7 mb-5">
                   Hire top real estate talent in the Middle East region
                 </CardDescription>
-                <ul className="text-left text-gray-300 text-sm space-y-2">
+                <div className="mb-5 h-px bg-[#89A5DB]/20" />
+                <ul className="text-left text-[#D5E1FA] text-sm space-y-2.5">
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#FF2F80]/55">
+                      <Sparkles className="w-2.5 h-2.5 text-[#FF2F80] flex-shrink-0" />
+                    </div>
                     <span>Access verified professionals</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#E91E63]/50">
+                      <Sparkles className="w-2.5 h-2.5 text-[#E91E63] flex-shrink-0" />
+                    </div>
                     <span>Advanced ATS & screening tools</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#E91E63]/50">
+                      <Sparkles className="w-2.5 h-2.5 text-[#E91E63] flex-shrink-0" />
+                    </div>
                     <span>Video interviews & assessments</span>
                   </li>
                 </ul>
+                <div className="mt-6 flex items-center justify-between rounded-2xl border border-[#7F9ACD]/25 bg-[linear-gradient(180deg,rgba(50,76,121,0.5),rgba(33,55,97,0.46))] px-4 py-3 text-sm text-[#E4EBFF]">
+                  <span>Open hiring workspace</span>
+                  <ArrowRight className="h-4 w-4 text-[#FF2F80] transition-transform duration-300 group-hover:translate-x-1" />
+                </div>
               </CardContent>
             </Card>
 
             {/* Broker */}
             <Card
-              className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 transition-all duration-500 cursor-pointer group hover:scale-105 hover:shadow-2xl"
+              className="relative overflow-hidden rounded-[22px] border border-[#8FA9D8]/30 bg-[linear-gradient(180deg,rgba(18,36,72,0.96)_0%,rgba(11,26,56,0.94)_50%,rgba(6,18,42,0.92)_100%)] backdrop-blur-xl transition-all duration-500 cursor-pointer group hover:-translate-y-2 hover:border-[#FF3D90]/75 hover:shadow-[0_22px_52px_rgba(0,0,0,0.45)]"
               onClick={() => handleRoleSelect("broker")}
             >
-              <CardHeader className="text-center pb-4">
-                <div className="w-20 h-20 bg-[#E91E63]/20 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                  <Building2 className="w-10 h-10 text-[#E91E63]" />
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF2F80] to-transparent opacity-100" />
+              <CardHeader className="text-center pb-3 pt-7 px-5">
+                <div className="mb-3 flex justify-center">
+                  <div className="rounded-full border border-[#8CA4D6]/20 bg-[#314D7D]/45 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[#D7E2FD]">
+                    Brokerage
+                  </div>
                 </div>
-                <CardTitle className="text-2xl text-white">Broker / Agency</CardTitle>
+                <div className="w-16 h-16 rounded-full border border-[#7D98CC]/28 bg-[radial-gradient(circle_at_top,rgba(76,112,176,0.32),rgba(28,52,95,0.62))] flex items-center justify-center mx-auto mb-4 transition-all duration-300 shadow-[0_0_30px_rgba(30,89,187,0.28)] group-hover:shadow-[0_0_38px_rgba(255,47,128,0.32)]">
+                  <Building2 className="w-8 h-8 text-[#FF2F80]" />
+                </div>
+                <CardTitle className="text-[2rem] leading-none text-white">Broker / Agency</CardTitle>
               </CardHeader>
-              <CardContent className="text-center">
-                <CardDescription className="text-gray-300 text-base leading-relaxed mb-4">
+              <CardContent className="text-center px-5 pb-5">
+                <CardDescription className="text-[#C9D6F1] text-sm leading-7 mb-5">
                   Connect talent with opportunities in real estate
                 </CardDescription>
-                <ul className="text-left text-gray-300 text-sm space-y-2">
+                <div className="mb-5 h-px bg-[#89A5DB]/20" />
+                <ul className="text-left text-[#D5E1FA] text-sm space-y-2.5">
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#FF2F80]/55">
+                      <Sparkles className="w-2.5 h-2.5 text-[#FF2F80] flex-shrink-0" />
+                    </div>
                     <span>Dual access to jobs & candidates</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#E91E63]/50">
+                      <Sparkles className="w-2.5 h-2.5 text-[#E91E63] flex-shrink-0" />
+                    </div>
                     <span>Commission tracking tools</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-[#E91E63] mt-0.5 flex-shrink-0" />
+                    <div className="mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-[#E91E63]/50">
+                      <Sparkles className="w-2.5 h-2.5 text-[#E91E63] flex-shrink-0" />
+                    </div>
                     <span>Client & candidate management</span>
                   </li>
                 </ul>
+                <div className="mt-6 flex items-center justify-between rounded-2xl border border-[#7F9ACD]/25 bg-[linear-gradient(180deg,rgba(50,76,121,0.5),rgba(33,55,97,0.46))] px-4 py-3 text-sm text-[#E4EBFF]">
+                  <span>Enter broker mode</span>
+                  <ArrowRight className="h-4 w-4 text-[#FF2F80] transition-transform duration-300 group-hover:translate-x-1" />
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="text-center mt-8">
-            <p className="text-gray-400 text-sm">You can change your role anytime from your profile settings</p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm text-[#D6E3FF]">
+            <div className="rounded-full border border-[#88A5DB]/35 bg-[linear-gradient(180deg,rgba(36,63,109,0.68),rgba(26,45,82,0.56))] px-5 py-2.5 shadow-[0_16px_28px_rgba(0,0,0,0.24)]">Tailored tools by role</div>
+            <div className="rounded-full border border-[#88A5DB]/35 bg-[linear-gradient(180deg,rgba(36,63,109,0.68),rgba(26,45,82,0.56))] px-5 py-2.5 shadow-[0_16px_28px_rgba(0,0,0,0.24)]">Switch anytime later</div>
+            <div className="rounded-full border border-[#88A5DB]/35 bg-[linear-gradient(180deg,rgba(36,63,109,0.68),rgba(26,45,82,0.56))] px-5 py-2.5 shadow-[0_16px_28px_rgba(0,0,0,0.24)]">Same Renet network, clearer path</div>
           </div>
         </div>
       </div>
@@ -674,26 +854,30 @@ export default function HomePage() {
             className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up"
             style={{ animationDelay: "0.4s" }}
           >
-            <Link href="/auth/register">
-              <Button
-                size="lg"
-                className="bg-[#008080] hover:bg-[#006666] text-white px-8 py-6 text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
-              >
-                {currentContent.hero.cta}
-                <ArrowRight
-                  className={`w-5 h-5 ${isRTL ? "mr-2 rotate-180" : "ml-2"} group-hover:translate-x-1 transition-transform`}
-                />
-              </Button>
-            </Link>
-            <Link href="/hire-talents">
-              <Button
-                variant="outline"
-                size="lg"
-                className="px-8 py-6 text-lg border-2 border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent hover:scale-105 hover:shadow-lg transition-all duration-300"
-              >
-                Hire Talents
-              </Button>
-            </Link>
+            {selectedRole !== "job-seeker" && (
+              <>
+                <Link href="/auth/register">
+                  <Button
+                    size="lg"
+                    className="bg-[#008080] hover:bg-[#006666] text-white px-8 py-6 text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
+                  >
+                    {currentContent.hero.cta}
+                    <ArrowRight
+                      className={`w-5 h-5 ${isRTL ? "mr-2 rotate-180" : "ml-2"} group-hover:translate-x-1 transition-transform`}
+                    />
+                  </Button>
+                </Link>
+                <Link href="/hire-talents">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="px-8 py-6 text-lg border-2 border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent hover:scale-105 hover:shadow-lg transition-all duration-300"
+                  >
+                    Hire Talents
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="mt-16 grid grid-cols-3 gap-4 max-w-3xl mx-auto">
@@ -824,152 +1008,93 @@ export default function HomePage() {
       {/* Explore Renet Platform Section */}
       <section className="py-20 px-4 bg-white">
         <div className="container mx-auto">
-          <div className="text-center mb-16 animate-fade-in-up">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4 text-balance">Explore Renet Platform</h2>
-            <p className="text-xl text-gray-600 text-balance max-w-2xl mx-auto">
-              Comprehensive tools and resources for real estate professionals across the Middle East
-            </p>
-          </div>
-
-          {/* For Job Seekers */}
-          <div className="mb-16">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3 animate-fade-in-left">
-              <Users className="w-7 h-7 text-[#008080]" />
-              For Job Seekers
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-              {platformPages.jobSeekers.map((page, index) => {
-                const Icon = page.icon
-                return (
-                  <Link key={index} href={page.href}>
-                    <Card
-                      className="border-gray-200 bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.1}s` }}
+          {activeJourney ? (
+            <>
+              <div className="mx-auto mb-14 max-w-5xl text-center animate-fade-in-up">
+                <Badge className="mb-5 border-[#2C3E50]/10 bg-[#2C3E50]/5 px-4 py-2 text-[#2C3E50]">
+                  {activeJourney.eyebrow}
+                </Badge>
+                <h2 className="mb-4 text-4xl font-bold text-gray-900 text-balance">{activeJourney.title}</h2>
+                <p className="mx-auto max-w-3xl text-xl text-gray-600 text-balance">{activeJourney.subtitle}</p>
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                  {activeJourney.stats.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-full border border-gray-200 bg-white px-5 py-3 text-sm shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                     >
-                      <CardHeader className="pb-3">
-                        <div className="w-12 h-12 bg-[#008080]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                          <Icon className="w-6 h-6 text-[#008080]" />
+                      <span className="font-semibold text-gray-900">{stat.value}</span>
+                      <span className="ml-2 text-gray-500">{stat.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {activeJourney.sections.map((section, sectionIndex) => {
+                const SectionIcon = section.icon
+                const accent = accentClasses[section.accent]
+
+                return (
+                  <div key={section.title} className="mb-16">
+                    <div className="mb-6 flex items-center justify-between gap-4 animate-fade-in-left">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${accent.bg}`}>
+                          <SectionIcon className={`h-6 w-6 ${accent.icon}`} />
                         </div>
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-[#008080] transition-colors">
-                          {page.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-sm leading-relaxed text-gray-600">
-                          {page.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-900">{section.title}</h3>
+                          <p className="text-sm text-gray-500">Focused actions for your role</p>
+                        </div>
+                      </div>
+                      <div className={`hidden rounded-full px-3 py-1 text-xs font-medium md:block ${accent.pill}`}>
+                        {section.pages.length} actions
+                      </div>
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                      {section.pages.map((page, index) => {
+                        const Icon = page.icon
+                        return (
+                          <Link key={page.title} href={page.href}>
+                            <Card
+                              className={`group h-full cursor-pointer border bg-white/95 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${accent.border}`}
+                              style={{ animationDelay: `${sectionIndex * 0.12 + index * 0.08}s` }}
+                            >
+                              <CardHeader className="pb-4">
+                                <div
+                                  className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${accent.bg} transition-all duration-300 group-hover:scale-110 group-hover:rotate-6`}
+                                >
+                                  <Icon className={`h-7 w-7 ${accent.icon}`} />
+                                </div>
+                                <CardTitle className={`text-xl text-gray-900 transition-colors ${accent.hover}`}>
+                                  {page.title}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <CardDescription className="text-sm leading-7 text-gray-600">
+                                  {page.description}
+                                </CardDescription>
+                                <div className="mt-6 flex items-center text-sm font-medium text-gray-900">
+                                  Open
+                                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )
               })}
+            </>
+          ) : (
+            <div className="text-center mb-16 animate-fade-in-up">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 text-balance">Explore Renet Platform</h2>
+              <p className="text-xl text-gray-600 text-balance max-w-2xl mx-auto">
+                Comprehensive tools and resources for real estate professionals across the Middle East
+              </p>
             </div>
-          </div>
-
-          {/* For Employers */}
-          <div className="mb-16">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3 animate-fade-in-left">
-              <Briefcase className="w-7 h-7 text-[#D4AF37]" />
-              For Employers & Agencies
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {platformPages.employers.map((page, index) => {
-                const Icon = page.icon
-                return (
-                  <Link key={index} href={page.href}>
-                    <Card
-                      className="border-gray-200 bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                          <Icon className="w-6 h-6 text-[#D4AF37]" />
-                        </div>
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-[#D4AF37] transition-colors">
-                          {page.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-sm leading-relaxed text-gray-600">
-                          {page.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Marketplace & Tools */}
-          <div className="mb-16">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3 animate-fade-in-left">
-              <Building2 className="w-7 h-7 text-[#008080]" />
-              Marketplace & Tools
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {platformPages.marketplace.map((page, index) => {
-                const Icon = page.icon
-                return (
-                  <Link key={index} href={page.href}>
-                    <Card
-                      className="border-gray-200 bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="w-12 h-12 bg-[#008080]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                          <Icon className="w-6 h-6 text-[#008080]" />
-                        </div>
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-[#008080] transition-colors">
-                          {page.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-sm leading-relaxed text-gray-600">
-                          {page.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Community & Learning */}
-          <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3 animate-fade-in-left">
-              <GraduationCap className="w-7 h-7 text-[#D4AF37]" />
-              Community & Learning
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {platformPages.community.map((page, index) => {
-                const Icon = page.icon
-                return (
-                  <Link key={index} href={page.href}>
-                    <Card
-                      className="border-gray-200 bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-2 cursor-pointer h-full group animate-fade-in-up"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                          <Icon className="w-6 h-6 text-[#D4AF37]" />
-                        </div>
-                        <CardTitle className="text-lg text-gray-900 group-hover:text-[#D4AF37] transition-colors">
-                          {page.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-sm leading-relaxed text-gray-600">
-                          {page.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -1117,3 +1242,4 @@ export default function HomePage() {
     </div>
   )
 }
+

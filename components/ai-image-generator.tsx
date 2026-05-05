@@ -10,6 +10,8 @@ import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sparkles, ImageIcon, Wand2, Download, Share2 } from "lucide-react"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
+
 export function AIImageGenerator() {
   const [description, setDescription] = useState("")
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
@@ -23,7 +25,7 @@ export function AIImageGenerator() {
     setLoading(true)
     try {
       // Call AI image generation API
-      const response = await fetch("/api/ai/generate-image", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/generate-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -49,7 +51,7 @@ export function AIImageGenerator() {
       formData.append("image", file)
       formData.append("style", style)
 
-      const response = await fetch("/api/ai/virtual-staging", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/virtual-staging`, {
         method: "POST",
         body: formData,
       })
